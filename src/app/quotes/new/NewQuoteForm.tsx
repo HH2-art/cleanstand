@@ -13,10 +13,12 @@ import type { PrivateLaborLine, PrivateQuoteInput, PublicLaborLine, PublicQuoteI
 import { workTypeLabel } from "@/lib/workTypeLabels";
 
 const BUILDING_TYPES = ["오피스", "병원", "공장", "학교", "상가", "기타"];
-const PUBLIC_ROLE_LABELS: Record<PublicLaborLine["laborRole"], string> = {
-  simple: "127. 단순노무종사원",
-  foreman: "129. 작업반장",
-};
+// src/lib/calc/quote.ts의 DEFAULT_WEEKS_PER_MONTH와 동일 — "월" 단위 빈도 입력을 주 단위로 환산할 때만 쓴다.
+const WEEKS_PER_MONTH = 4.345;
+const MONTHLY_HOURS_PER_WORKER = 209;
+
+const ACTIVE_TOGGLE_STYLE = { background: "var(--surface)", color: "var(--brand)", boxShadow: "var(--shadow-sm)" };
+const ACTIVE_PILL_STYLE = { background: "var(--brand-subtle)", color: "var(--brand)", fontWeight: 600 };
 
 interface RoleRate {
   role_name: string;
@@ -42,6 +44,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   transport: "운반",
   other: "기타",
 };
+const CATEGORY_ORDER = ["supplies", "equipment", "uniform", "transport", "other"];
 
 let rowIdSeq = 0;
 function nextRowId() {
@@ -56,6 +59,10 @@ interface PublicLaborRow extends PublicLaborLine {
   id: number;
 }
 
+function won(amount: number) {
+  return `${Math.round(amount).toLocaleString()}원`;
+}
+
 export function NewQuoteForm({
   company,
   roleRates,
@@ -63,7 +70,7 @@ export function NewQuoteForm({
   expenseItems,
   regulation,
 }: {
-  company: { generalAdminRate: number; profitRate: number; vatRate: number };
+  company: { name: string; generalAdminRate: number; profitRate: number; vatRate: number };
   roleRates: RoleRate[];
   productivityRates: ProductivityRate[];
   expenseItems: ExpenseItem[];
@@ -77,11 +84,21 @@ export function NewQuoteForm({
   const [buildingName, setBuildingName] = useState("");
   const [buildingType, setBuildingType] = useState(BUILDING_TYPES[0]);
   const [workType, setWorkType] = useState(productivityRates[0]?.work_type ?? "");
+  // 작업유형 선택 시 프리필되지만, 현장마다 직접 조정할 수 있다(예전엔 고정값이었음).
+  const [sqmPerHour, setSqmPerHour] = useState<number>(() => productivityRates[0]?.sqmPerHour ?? 0);
   const [areaSqm, setAreaSqm] = useState<number | "">("");
   const [frequencyPerWeek, setFrequencyPerWeek] = useState<number | "">(5);
-  const [monthlyHoursPerWorker, setMonthlyHoursPerWorker] = useState(209); // 참고용 힌트 계산에만 쓰임
+  const [freqUnit, setFreqUnit] = useState<"week" | "month">("week");
+
+  // 부가 작업 태그 — 참고용, 계산에는 반영되지 않는다(실제 작업유형 목록을 그대로 재사용하되
+  // 저장 payload에는 포함하지 않는다 — 지난 세션에 같은 이유로 비슷한 "primary/pin" 방식을
+  // 되돌린 적이 있어, 계산에 안 쓰인다는 걸 라벨로 항상 명시한다).
+  const [selectedTagKeys, setSelectedTagKeys] = useState<string[]>([]);
+  const [customTagOpen, setCustomTagOpen] = useState(false);
+  const [customTagText, setCustomTagText] = useState("");
 
   // site_conditions — 계산엔 안 쓰이는 참고용 현장 맥락 정보
+  const [conditionsOpen, setConditionsOpen] = useState(false);
   const [contaminationLevel, setContaminationLevel] = useState("보통");
   const [restroomCount, setRestroomCount] = useState<number | "">("");
   const [stairFloors, setStairFloors] = useState<number | "">("");
@@ -129,6 +146,7 @@ export function NewQuoteForm({
         setMode(data.mode);
         setAreaSqm(data.areaSqm);
         setFrequencyPerWeek(data.frequencyPerWeek);
+        setFreqUnit("week");
         if (data.mode === "private" && data.privateLaborLines.length > 0) {
           setPrivateLaborRows(
             data.privateLaborLines.map((line) => ({
@@ -146,27 +164,32 @@ export function NewQuoteForm({
     });
   }
 
+  function toggleTag(key: string) {
+    setSelectedTagKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  }
+
   const selectedProductivity = productivityRates.find((r) => r.work_type === workType);
   const selectedExpenses = expenseItems
     .filter((item) => selectedExpenseIds.has(item.id))
     .map((item) => ({ name: item.name, amount: item.unit_cost }));
 
   const numericAreaSqm = typeof areaSqm === "number" ? areaSqm : 0;
-  const numericFrequency = typeof frequencyPerWeek === "number" ? frequencyPerWeek : 0;
+  const rawFrequency = typeof frequencyPerWeek === "number" ? frequencyPerWeek : 0;
+  const numericFrequency = freqUnit === "week" ? rawFrequency : rawFrequency / WEEKS_PER_MONTH;
 
   const hoursHint = useMemo(() => {
-    if (!selectedProductivity || numericAreaSqm <= 0 || numericFrequency <= 0) return null;
-    return estimateHours({ areaSqm: numericAreaSqm, sqmPerHour: selectedProductivity.sqmPerHour, frequencyPerWeek: numericFrequency });
-  }, [selectedProductivity, numericAreaSqm, numericFrequency]);
+    if (!sqmPerHour || numericAreaSqm <= 0 || numericFrequency <= 0) return null;
+    return estimateHours({ areaSqm: numericAreaSqm, sqmPerHour, frequencyPerWeek: numericFrequency });
+  }, [sqmPerHour, numericAreaSqm, numericFrequency]);
 
-  const workersHint = hoursHint !== null ? estimateWorkers(hoursHint, monthlyHoursPerWorker) : null;
+  const workersHint = hoursHint !== null ? estimateWorkers(hoursHint, MONTHLY_HOURS_PER_WORKER) : null;
 
   // 실시간 계산 미리보기 — 계산엔진은 순수함수라 클라이언트에서 바로 돌려도 안전하다.
   // (저장 시점에는 서버가 생산성/경비/법정기준값을 DB에서 다시 조회해 재계산한다.)
   const preview = useMemo(() => {
-    if (!selectedProductivity || numericAreaSqm <= 0 || numericFrequency <= 0) return null;
+    if (!sqmPerHour || numericAreaSqm <= 0 || numericFrequency <= 0) return null;
 
-    const site = { areaSqm: numericAreaSqm, sqmPerHour: selectedProductivity.sqmPerHour, frequencyPerWeek: numericFrequency };
+    const site = { areaSqm: numericAreaSqm, sqmPerHour, frequencyPerWeek: numericFrequency };
 
     if (mode === "private") {
       const laborLines = privateLaborRows.filter((row) => row.workerCount > 0 && row.hourlyRate > 0);
@@ -200,7 +223,7 @@ export function NewQuoteForm({
     return calculateQuote(input);
   }, [
     mode,
-    selectedProductivity,
+    sqmPerHour,
     numericAreaSqm,
     numericFrequency,
     privateLaborRows,
@@ -214,8 +237,6 @@ export function NewQuoteForm({
   ]);
 
   // 공공모드 법정비용 추천값: 예상 노무비 × regulation 4대보험 회사부담 합계.
-  // 정밀 계산 베이스(보수 상하한 등)는 노무사 확인이 필요하다는 사업계획 문서의 캐벗을
-  // 그대로 반영 — 어디까지나 시작점이고 항상 직접 수정 가능하다.
   const suggestedLegalCost = useMemo(() => {
     if (!regulation || !preview) return null;
     const insuranceRateSum =
@@ -289,406 +310,568 @@ export function NewQuoteForm({
     });
   }
 
+  const selectedWorkTypeLabel = selectedProductivity ? workTypeLabel(selectedProductivity.work_type, selectedProductivity.displayName) : "";
+
   return (
-    <div className="flex flex-col gap-8">
-      {/* 모드 선택 */}
-      <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-semibold">모드</h2>
-        <div className="flex gap-4 text-sm">
-          <label className="flex items-center gap-2">
-            <input type="radio" checked={mode === "private"} onChange={() => setMode("private")} />
-            일반 견적 (민간)
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              checked={mode === "public"}
-              onChange={() => setMode("public")}
-              disabled={!regulation}
-            />
-            공공입찰 원가계산{!regulation && " (법정기준값 없음)"}
-          </label>
-        </div>
-      </section>
+    <>
+      <div className="topbar">
+        <h1>새 견적 만들기</h1>
+        <p>{company.name}</p>
+      </div>
 
-      {/* 현장정보 */}
-      <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">현장정보</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <TextField label="현장명 *" value={buildingName} onChange={setBuildingName} />
-          <SelectField label="건물유형" value={buildingType} onChange={setBuildingType} options={BUILDING_TYPES} />
-          <SelectField
-            label="청소범위 (작업유형) *"
-            value={workType}
-            onChange={setWorkType}
-            options={productivityRates.map((r) => r.work_type)}
-            labels={Object.fromEntries(
-              productivityRates.map((r) => [r.work_type, workTypeLabel(r.work_type, r.displayName)]),
-            )}
-          />
-          <NumberField label="면적 (㎡) *" value={areaSqm} onChange={setAreaSqm} />
-          <NumberField label="빈도 (주 n회) *" value={frequencyPerWeek} onChange={setFrequencyPerWeek} />
-          <NumberField
-            label="1인당 월 투입 가능시간 (참고용)"
-            value={monthlyHoursPerWorker}
-            onChange={(v) => setMonthlyHoursPerWorker(Number(v) || 209)}
-          />
-        </div>
-        {selectedProductivity && (
-          <p className="text-xs text-gray-400">
-            생산성 기준: {selectedProductivity.sqmPerHour}㎡/h{selectedProductivity.isOverridden && " (회사 커스텀값)"}
-            {hoursHint !== null && ` · 예상 작업시간: ${hoursHint.toFixed(1)}h`}
-            {workersHint !== null && ` · 참고 추정 총인원: 약 ${workersHint}명 (아래에서 역할별로 직접 배분하세요)`}
-          </p>
-        )}
-      </section>
-
-      {/* 지난 견적 참고 */}
-      {pastQuotes.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">
-            지난 견적 참고 <span className="text-xs font-normal text-gray-400">({buildingType} 유형 최근 {pastQuotes.length}건)</span>
-          </h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {pastQuotes.map((q) => (
-              <div key={q.id} className="flex flex-col gap-1 rounded-md border border-gray-200 p-3 text-sm">
-                <p className="font-medium">{q.buildingName}</p>
-                <p className="text-xs text-gray-400">
-                  {q.areaSqm.toLocaleString()}㎡ · 주 {q.frequencyPerWeek}회 · {q.mode === "private" ? "일반" : "공공입찰"}
-                </p>
-                <p className="text-xs text-gray-400">{won(q.quoteAmount)}</p>
-                <button
-                  type="button"
-                  onClick={() => handleReuse(q.id)}
-                  disabled={reusingId === q.id}
-                  className="mt-1 w-fit text-xs underline disabled:opacity-40"
-                >
-                  {reusingId === q.id ? "불러오는 중..." : "이 구성으로 시작하기"}
-                </button>
-              </div>
-            ))}
+      <div className="page">
+        <div className="col-form">
+          {/* 1. 모드 선택 */}
+          <div className="card">
+            <div className="card-head">
+              <h2>모드</h2>
+              <span className="step">1</span>
+            </div>
+            <div className="mode-toggle">
+              <button type="button" onClick={() => setMode("private")} style={mode === "private" ? ACTIVE_TOGGLE_STYLE : undefined}>
+                일반 견적 (민간)
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("public")}
+                disabled={!regulation}
+                style={mode === "public" ? ACTIVE_TOGGLE_STYLE : undefined}
+              >
+                공공입찰 원가계산{!regulation && " (법정기준값 없음)"}
+              </button>
+            </div>
           </div>
-        </section>
-      )}
 
-      {/* site_conditions — 참고용 */}
-      <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">
-          현장 특이사항 <span className="text-xs font-normal text-gray-400">(계산에는 쓰이지 않는 참고용 정보)</span>
-        </h2>
-        <div className="grid grid-cols-2 gap-4">
-          <SelectField label="오염도" value={contaminationLevel} onChange={setContaminationLevel} options={["낮음", "보통", "높음"]} />
-          <NumberField label="화장실 수" value={restroomCount} onChange={setRestroomCount} />
-          <NumberField label="계단 층수" value={stairFloors} onChange={setStairFloors} />
-          <TextField label="바닥재질" value={floorMaterial} onChange={setFloorMaterial} placeholder="예: 타일, 대리석, 장판" />
-          <TextField label="주차" value={parking} onChange={setParking} placeholder="예: 가능, 불가능, 유료" />
-          <SelectField label="집기밀도" value={furnitureDensity} onChange={setFurnitureDensity} options={["낮음", "보통", "높음"]} />
-        </div>
-        <TextAreaField label="특이사항" value={notes} onChange={setNotes} />
-      </section>
-
-      {/* 노동원가 — 역할별 인원 */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">노동원가 — 역할별 인원</h2>
-        {mode === "private" ? (
-          <>
-            {roleRates.length === 0 && (
-              <p className="text-xs text-gray-400">아직 등록된 직원이 없습니다 — 역할명과 시급원가를 직접 입력해주세요.</p>
-            )}
-            <div className="flex flex-col gap-2">
-              {privateLaborRows.map((row) => (
-                <div key={row.id} className="flex items-end gap-2">
-                  {roleRates.length > 0 ? (
-                    <div className="flex flex-col gap-1">
-                      <label className="text-sm font-medium">역할</label>
-                      <select
-                        value={roleRates.some((r) => r.role_name === row.roleName) ? row.roleName : "__custom__"}
-                        onChange={(e) => {
-                          const rate = roleRates.find((r) => r.role_name === e.target.value);
-                          if (rate) updatePrivateRow(row.id, { roleName: rate.role_name, hourlyRate: rate.standard_hourly_rate });
-                          else updatePrivateRow(row.id, { roleName: "" });
-                        }}
-                        className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-                      >
-                        {roleRates.map((r) => (
-                          <option key={r.role_name} value={r.role_name}>
-                            {r.role_name}
-                          </option>
-                        ))}
-                        <option value="__custom__">직접 입력</option>
-                      </select>
-                    </div>
-                  ) : null}
-                  {(roleRates.length === 0 || !roleRates.some((r) => r.role_name === row.roleName)) && (
-                    <TextField
-                      label="역할명"
-                      value={row.roleName}
-                      onChange={(v) => updatePrivateRow(row.id, { roleName: v })}
-                      placeholder="예: 일반청소원, 반장"
-                    />
-                  )}
-                  <NumberField
-                    label="인원수"
-                    value={row.workerCount}
-                    onChange={(v) => updatePrivateRow(row.id, { workerCount: Number(v) || 0 })}
-                  />
-                  <NumberField
-                    label="표준 시급원가 (원/h)"
-                    value={row.hourlyRate}
-                    onChange={(v) => updatePrivateRow(row.id, { hourlyRate: Number(v) || 0 })}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removePrivateRow(row.id)}
-                    disabled={privateLaborRows.length === 1}
-                    className="mb-1 text-xs text-red-600 underline disabled:opacity-30"
-                  >
-                    삭제
-                  </button>
-                </div>
-              ))}
+          {/* 2. 현장정보 */}
+          <div className="card">
+            <div className="card-head">
+              <h2>현장정보</h2>
+              <span className="step">2</span>
             </div>
-            <button type="button" onClick={addPrivateRow} className="w-fit text-xs underline">
-              + 역할 추가
-            </button>
-          </>
-        ) : (
-          <>
-            <div className="flex flex-col gap-2">
-              {publicLaborRows.map((row) => {
-                const dailyWage = regulation
-                  ? row.laborRole === "simple"
-                    ? regulation.simpleLaborDailyWage
-                    : regulation.foremanDailyWage
-                  : null;
-                const hourlyRate = regulation ? publicHourlyRate(regulation, row.laborRole) : null;
-                return (
-                  <div key={row.id} className="flex flex-col gap-1">
-                    <div className="flex items-end gap-2">
-                      <SelectField
-                        label="노무비 직종"
-                        value={row.laborRole}
-                        onChange={(v) => updatePublicRow(row.id, { laborRole: v as PublicLaborLine["laborRole"] })}
-                        options={["simple", "foreman"]}
-                        labels={PUBLIC_ROLE_LABELS}
-                      />
-                      <NumberField
-                        label="인원수"
-                        value={row.workerCount}
-                        onChange={(v) => updatePublicRow(row.id, { workerCount: Number(v) || 0 })}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removePublicRow(row.id)}
-                        disabled={publicLaborRows.length === 1}
-                        className="mb-1 text-xs text-red-600 underline disabled:opacity-30"
-                      >
-                        삭제
-                      </button>
-                    </div>
-                    {dailyWage !== null && hourlyRate !== null && (
-                      <p className="text-xs text-gray-400">
-                        적용 법정노임: {Math.round(dailyWage).toLocaleString()}원/일 ({Math.round(hourlyRate).toLocaleString()}원/h)
-                        {regulation && ` · ${regulation.label} 기준`}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
+            <div className="field-grid">
+              <div className="field">
+                <label>
+                  현장명 <span className="req">*</span>
+                </label>
+                <input type="text" value={buildingName} onChange={(e) => setBuildingName(e.target.value)} />
+              </div>
+              <div className="field">
+                <label>건물유형</label>
+                <select value={buildingType} onChange={(e) => setBuildingType(e.target.value)}>
+                  {BUILDING_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <button type="button" onClick={addPublicRow} className="w-fit text-xs underline">
-              + 역할 추가
-            </button>
 
-            <div className="mt-2 flex flex-col gap-1">
-              <NumberField label="법정비용 (원, 4대보험 등)" value={legalCost} onChange={(v) => setLegalCost(Number(v) || 0)} />
-              {suggestedLegalCost !== null && (
-                <button
-                  type="button"
-                  onClick={() => setLegalCost(Math.round(suggestedLegalCost))}
-                  className="w-fit text-xs text-gray-400 underline"
+            <div className="field-grid" style={{ marginTop: 16 }}>
+              <div className="field">
+                <label>
+                  청소범위 (작업유형) <span className="req">*</span>
+                </label>
+                <select
+                  value={workType}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setWorkType(val);
+                    const def = productivityRates.find((r) => r.work_type === val);
+                    if (def) setSqmPerHour(def.sqmPerHour);
+                  }}
                 >
-                  추천값 적용: {Math.round(suggestedLegalCost).toLocaleString()}원 (노무비 × 4대보험 회사부담률, 참고용)
-                </button>
+                  {productivityRates.map((r) => (
+                    <option key={r.work_type} value={r.work_type}>
+                      {workTypeLabel(r.work_type, r.displayName)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>작업속도 ({selectedWorkTypeLabel} 기준 프리필, 수정 가능)</label>
+                <div className="unit-suffix">
+                  <input type="number" value={sqmPerHour} onChange={(e) => setSqmPerHour(Number(e.target.value) || 0)} />
+                  <span>㎡ / 인시간</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="field-grid" style={{ marginTop: 16 }}>
+              <div className="field">
+                <label>
+                  면적 <span className="req">*</span>
+                </label>
+                <div className="unit-suffix">
+                  <input
+                    type="number"
+                    value={areaSqm}
+                    onChange={(e) => setAreaSqm(e.target.value === "" ? "" : Number(e.target.value))}
+                  />
+                  <span>㎡</span>
+                </div>
+              </div>
+              <div className="field">
+                <label>
+                  빈도 <span className="req">*</span>
+                </label>
+                <div className="freq-row">
+                  <input
+                    type="number"
+                    value={frequencyPerWeek}
+                    onChange={(e) => setFrequencyPerWeek(e.target.value === "" ? "" : Number(e.target.value))}
+                  />
+                  <div className="unit-toggle">
+                    <button type="button" className={freqUnit === "week" ? "active" : ""} onClick={() => setFreqUnit("week")}>
+                      주
+                    </button>
+                    <button type="button" className={freqUnit === "month" ? "active" : ""} onClick={() => setFreqUnit("month")}>
+                      월
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="field" style={{ marginTop: 16 }}>
+              <label>
+                부가 작업 태그 <span className="tag-info" style={{ marginLeft: 4 }}>참고용 · 계산 미반영</span>
+              </label>
+              <div className="chip-row">
+                {productivityRates.map((r) => {
+                  const selected = selectedTagKeys.includes(r.work_type);
+                  return (
+                    <span key={r.work_type} className={`chip ${selected ? "selected" : ""}`} onClick={() => toggleTag(r.work_type)}>
+                      {workTypeLabel(r.work_type, r.displayName)}
+                    </span>
+                  );
+                })}
+                <span className={`chip ${customTagOpen ? "selected" : ""}`} onClick={() => setCustomTagOpen((v) => !v)}>
+                  + 기타
+                </span>
+              </div>
+              {customTagOpen && (
+                <div className="chip-custom-input">
+                  <input
+                    type="text"
+                    value={customTagText}
+                    onChange={(e) => setCustomTagText(e.target.value)}
+                    placeholder="예: 소독 방역, 카펫 청소 등"
+                  />
+                </div>
               )}
             </div>
-          </>
-        )}
-      </section>
 
-      {/* 현장경비 */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">현장경비</h2>
-        {expenseItems.length > 0 ? (
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            {expenseItems.map((item) => (
-              <label key={item.id} className="flex items-center gap-2">
-                <input type="checkbox" checked={selectedExpenseIds.has(item.id)} onChange={() => toggleExpense(item.id)} />
-                {item.name} ({CATEGORY_LABELS[item.category] ?? item.category}, {item.unit_cost.toLocaleString()}원)
-              </label>
-            ))}
+            {pastQuotes.length > 0 && (
+              <div className="past-banner">
+                <div className="past-banner-head">
+                  <span className="t">지난 견적 참고</span>
+                  <span className="c">
+                    {buildingType} 유형 최근 {pastQuotes.length}건
+                  </span>
+                </div>
+                <div className="past-cards">
+                  {pastQuotes.map((q) => (
+                    <div key={q.id} className="past-card">
+                      <div className="name">{q.buildingName}</div>
+                      <div className="meta">
+                        {q.areaSqm.toLocaleString()}㎡ · 주 {q.frequencyPerWeek}회 ·{" "}
+                        {q.roles || (q.mode === "private" ? "일반" : "공공입찰")}
+                      </div>
+                      <div className="amount num">{won(q.quoteAmount)}</div>
+                      <button type="button" onClick={() => handleReuse(q.id)} disabled={reusingId === q.id}>
+                        {reusingId === q.id ? "불러오는 중..." : "이 구성으로 시작하기"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {hoursHint !== null && (
+              <div className="hint-line">
+                예상 작업시간 <b>{hoursHint.toFixed(1)}h</b> · 추천 인원 약 <b>{workersHint}명</b>
+              </div>
+            )}
           </div>
-        ) : (
-          <p className="text-sm text-gray-400">등록된 경비 항목이 없습니다.</p>
-        )}
-      </section>
 
-      {/* 비율 */}
-      <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">비율</h2>
-        <div className="grid grid-cols-3 gap-4">
-          <NumberField label="일반관리비율 (%)" value={generalAdminRate} onChange={(v) => setGeneralAdminRate(Number(v) || 0)} />
-          <NumberField label="이윤율 (%)" value={profitRate} onChange={(v) => setProfitRate(Number(v) || 0)} />
-          <NumberField label="VAT율 (%)" value={vatRate} onChange={(v) => setVatRate(Number(v) || 0)} />
+          {/* 3. 노동원가 */}
+          <div className="card">
+            <div className="card-head">
+              <h2>노동원가 — 역할별 인원</h2>
+              <span className="step">3</span>
+            </div>
+
+            {mode === "private" ? (
+              <>
+                <div className="role-rows">
+                  {privateLaborRows.map((row) => {
+                    const isKnownRole = roleRates.some((r) => r.role_name === row.roleName);
+                    return (
+                      <div key={row.id} className="role-row">
+                        <div className="field">
+                          <label>역할</label>
+                          <div className="role-pill">
+                            {roleRates.map((r) => (
+                              <button
+                                key={r.role_name}
+                                type="button"
+                                style={isKnownRole && row.roleName === r.role_name ? ACTIVE_PILL_STYLE : undefined}
+                                onClick={() => updatePrivateRow(row.id, { roleName: r.role_name, hourlyRate: r.standard_hourly_rate })}
+                              >
+                                {r.role_name}
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              style={!isKnownRole ? ACTIVE_PILL_STYLE : undefined}
+                              onClick={() => updatePrivateRow(row.id, { roleName: "" })}
+                            >
+                              직접 입력
+                            </button>
+                          </div>
+                        </div>
+                        {!isKnownRole && (
+                          <div className="field">
+                            <label>역할명</label>
+                            <input
+                              type="text"
+                              value={row.roleName}
+                              onChange={(e) => updatePrivateRow(row.id, { roleName: e.target.value })}
+                              placeholder="예: 일반청소원, 반장"
+                            />
+                          </div>
+                        )}
+                        <div className="field qty">
+                          <label>인원수</label>
+                          <input
+                            type="number"
+                            value={row.workerCount}
+                            onChange={(e) => updatePrivateRow(row.id, { workerCount: Number(e.target.value) || 0 })}
+                          />
+                        </div>
+                        <div className="field rate">
+                          <label>시급원가 (원/h)</label>
+                          <input
+                            type="number"
+                            value={row.hourlyRate}
+                            onChange={(e) => updatePrivateRow(row.id, { hourlyRate: Number(e.target.value) || 0 })}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="row-remove"
+                          onClick={() => removePrivateRow(row.id)}
+                          disabled={privateLaborRows.length === 1}
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                            <path d="M18 6 6 18M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+                {roleRates.length === 0 && (
+                  <p style={{ marginTop: 8, fontSize: 12, color: "var(--text-muted)" }}>
+                    아직 등록된 직원이 없습니다 — 역할명과 시급원가를 직접 입력해주세요.
+                  </p>
+                )}
+                <button type="button" className="add-row-btn" onClick={addPrivateRow} style={{ marginTop: 12 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                  역할 추가
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="role-rows">
+                  {publicLaborRows.map((row) => {
+                    const dailyWage = regulation ? (row.laborRole === "simple" ? regulation.simpleLaborDailyWage : regulation.foremanDailyWage) : null;
+                    const hourlyRate = regulation ? publicHourlyRate(regulation, row.laborRole) : null;
+                    return (
+                      <div key={row.id} className="role-row">
+                        <div className="field">
+                          <label>법정직종</label>
+                          <div className="role-pill">
+                            <button
+                              type="button"
+                              style={row.laborRole === "simple" ? ACTIVE_PILL_STYLE : undefined}
+                              onClick={() => updatePublicRow(row.id, { laborRole: "simple" })}
+                            >
+                              127. 단순노무종사원
+                            </button>
+                            <button
+                              type="button"
+                              style={row.laborRole === "foreman" ? ACTIVE_PILL_STYLE : undefined}
+                              onClick={() => updatePublicRow(row.id, { laborRole: "foreman" })}
+                            >
+                              129. 작업반장
+                            </button>
+                          </div>
+                        </div>
+                        <div className="field qty">
+                          <label>인원수</label>
+                          <input
+                            type="number"
+                            value={row.workerCount}
+                            onChange={(e) => updatePublicRow(row.id, { workerCount: Number(e.target.value) || 0 })}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="row-remove"
+                          onClick={() => removePublicRow(row.id)}
+                          disabled={publicLaborRows.length === 1}
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                            <path d="M18 6 6 18M6 6l12 12" />
+                          </svg>
+                        </button>
+                        {dailyWage !== null && hourlyRate !== null && (
+                          <div className="note">
+                            적용 법정노임: {Math.round(dailyWage).toLocaleString()}원/일 ({Math.round(hourlyRate).toLocaleString()}원/h)
+                            {regulation && ` · ${regulation.label} 기준`}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <button type="button" className="add-row-btn" onClick={addPublicRow} style={{ marginTop: 12 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                  역할 추가
+                </button>
+
+                <div className="field" style={{ marginTop: 18, maxWidth: 280 }}>
+                  <label>법정비용 (원, 4대보험 등)</label>
+                  <input type="number" value={legalCost} onChange={(e) => setLegalCost(Number(e.target.value) || 0)} />
+                </div>
+                {suggestedLegalCost !== null && (
+                  <button
+                    type="button"
+                    className="add-row-btn"
+                    style={{ marginTop: 8, color: "var(--text-muted)" }}
+                    onClick={() => setLegalCost(Math.round(suggestedLegalCost))}
+                  >
+                    추천값 적용: {Math.round(suggestedLegalCost).toLocaleString()}원 (노무비 × 4대보험 회사부담률, 참고용)
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* 4. 경비 항목 */}
+          <div className="card">
+            <div className="card-head">
+              <h2>현장경비</h2>
+              <span className="step">4</span>
+            </div>
+            {expenseItems.length > 0 ? (
+              <div className="expense-groups">
+                {CATEGORY_ORDER.map((cat) => {
+                  const items = expenseItems.filter((it) => it.category === cat);
+                  if (items.length === 0) return null;
+                  return (
+                    <div key={cat} className="expense-group">
+                      <div className="expense-group-label">{CATEGORY_LABELS[cat] ?? cat}</div>
+                      <div className="expense-grid">
+                        {items.map((item) => (
+                          <label key={item.id} className="expense-item">
+                            <input type="checkbox" checked={selectedExpenseIds.has(item.id)} onChange={() => toggleExpense(item.id)} />
+                            {item.name}
+                            <span className="cost num">{item.unit_cost.toLocaleString()}원</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p style={{ fontSize: 13, color: "var(--text-muted)" }}>등록된 경비 항목이 없습니다.</p>
+            )}
+          </div>
+
+          {/* 5. 비율 */}
+          <div className="card">
+            <div className="card-head">
+              <h2>비율</h2>
+              <span className="step">5</span>
+            </div>
+            <div className="rate-grid">
+              <div className="field">
+                <label>일반관리비율 (%)</label>
+                <input type="number" value={generalAdminRate} onChange={(e) => setGeneralAdminRate(Number(e.target.value) || 0)} />
+                {mode === "public" && regulation && generalAdminRate > regulation.generalAdminRateCap && (
+                  <div className="rate-clamp">
+                    입력 {generalAdminRate}% → 법정 상한 {regulation.generalAdminRateCap}%로 자동 조정
+                  </div>
+                )}
+              </div>
+              <div className="field">
+                <label>이윤율 (%)</label>
+                <input type="number" value={profitRate} onChange={(e) => setProfitRate(Number(e.target.value) || 0)} />
+                {mode === "public" && regulation && profitRate > regulation.profitRateCap && (
+                  <div className="rate-clamp">
+                    입력 {profitRate}% → 법정 상한 {regulation.profitRateCap}%로 자동 조정
+                  </div>
+                )}
+              </div>
+              <div className="field">
+                <label>VAT율 (%)</label>
+                <input type="number" value={vatRate} onChange={(e) => setVatRate(Number(e.target.value) || 0)} />
+              </div>
+            </div>
+            {mode === "public" && regulation && (
+              <p style={{ marginTop: 14, fontSize: 12.5, color: "var(--text-muted)" }}>
+                공공모드 상한: 관리비 {regulation.generalAdminRateCap}% / 이윤 {regulation.profitRateCap}% — 저장 시 자동으로 상한을 넘지 않게
+                조정됩니다.
+              </p>
+            )}
+          </div>
+
+          {/* 6. 현장조건 (접힘) */}
+          <div className="card">
+            <div className="collapse-head" onClick={() => setConditionsOpen((v) => !v)}>
+              <h2>현장 특이사항</h2>
+              <span className="tag-info">참고용 · 계산에 미반영</span>
+              <span className={`collapse-chevron ${conditionsOpen ? "open" : ""}`}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </span>
+            </div>
+            <div className="collapse-body" hidden={!conditionsOpen}>
+              <div className="field-grid">
+                <div className="field">
+                  <label>오염도</label>
+                  <select value={contaminationLevel} onChange={(e) => setContaminationLevel(e.target.value)}>
+                    {["낮음", "보통", "높음"].map((v) => (
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>화장실 수</label>
+                  <input
+                    type="number"
+                    value={restroomCount}
+                    onChange={(e) => setRestroomCount(e.target.value === "" ? "" : Number(e.target.value))}
+                  />
+                </div>
+                <div className="field">
+                  <label>계단 층수</label>
+                  <input
+                    type="number"
+                    value={stairFloors}
+                    onChange={(e) => setStairFloors(e.target.value === "" ? "" : Number(e.target.value))}
+                  />
+                </div>
+                <div className="field">
+                  <label>바닥재질</label>
+                  <input type="text" value={floorMaterial} onChange={(e) => setFloorMaterial(e.target.value)} placeholder="예: 타일, 대리석, 장판" />
+                </div>
+                <div className="field">
+                  <label>주차</label>
+                  <input type="text" value={parking} onChange={(e) => setParking(e.target.value)} placeholder="예: 가능, 불가능, 유료" />
+                </div>
+                <div className="field">
+                  <label>집기밀도</label>
+                  <select value={furnitureDensity} onChange={(e) => setFurnitureDensity(e.target.value)}>
+                    {["낮음", "보통", "높음"].map((v) => (
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="field" style={{ marginTop: 16 }}>
+                <label>특이사항</label>
+                <textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+              </div>
+            </div>
+          </div>
         </div>
-        {mode === "public" && regulation && (
-          <p className="text-xs text-gray-400">
-            공공모드 상한: 관리비 {regulation.generalAdminRateCap}% / 이윤 {regulation.profitRateCap}% — 저장 시 자동으로 상한을 넘지 않게 조정됩니다.
-          </p>
-        )}
-      </section>
 
-      {/* 계산결과 실시간 미리보기 */}
-      <section className="flex flex-col gap-2 rounded-md border border-gray-200 p-4">
-        <h2 className="text-lg font-semibold">계산결과</h2>
-        {preview ? (
-          <div className="flex flex-col gap-1 text-sm">
-            <Row label="예상 작업시간" value={`${preview.estimatedHours.toFixed(1)}h`} />
-            <Row label="투입 인원 합계" value={`${preview.estimatedWorkers}명`} />
-            {preview.lineItems
-              .filter((item) => item.category === "labor")
-              .map((item, index) => (
-                <Row key={`labor-${index}`} label={item.label} value={won(item.amount)} />
-              ))}
-            <Row label="직접노무비 합계" value={won(preview.laborCost)} />
-            {preview.legalCost > 0 && <Row label="법정비용" value={won(preview.legalCost)} />}
-            <Row label="현장경비" value={won(preview.expenseCost)} />
-            <Row label="일반관리비" value={`${won(preview.adminCost)} (${preview.appliedGeneralAdminRate.toFixed(2)}%)`} />
-            <Row label="기업이윤" value={`${won(preview.profitAmount)} (${preview.appliedProfitRate.toFixed(2)}%)`} />
-            <Row label="공급가액" value={won(preview.supplyAmount)} bold />
-            <Row label="VAT" value={won(preview.vatAmount)} />
-            <Row label="최종 견적" value={won(preview.quoteAmount)} bold large />
+        {/* 오른쪽 사이드바 */}
+        <div className="sidebar-wrap">
+          <div className="sidebar-card">
+            <div className="sidebar-head">
+              <h2>계산결과</h2>
+            </div>
+            {preview ? (
+              <>
+                <div className="sidebar-body">
+                  <div className="sr">
+                    <span className="l">예상 작업시간</span>
+                    <span className="v num">{preview.estimatedHours.toFixed(1)}h</span>
+                  </div>
+                  <div className="sr">
+                    <span className="l">필요 인원</span>
+                    <span className="v num">{preview.estimatedWorkers}명</span>
+                  </div>
+                  {preview.lineItems
+                    .filter((item) => item.category === "labor")
+                    .map((item, index) => (
+                      <div className="sr indent" key={`labor-${index}`}>
+                        <span className="l">{item.label}</span>
+                        <span className="v num">{won(item.amount)}</span>
+                      </div>
+                    ))}
+                  {preview.legalCost > 0 && (
+                    <div className="sr">
+                      <span className="l">법정비용</span>
+                      <span className="v num">{won(preview.legalCost)}</span>
+                    </div>
+                  )}
+                  <div className="sr">
+                    <span className="l">경비</span>
+                    <span className="v num">{won(preview.expenseCost)}</span>
+                  </div>
+                  <div className="sr">
+                    <span className="l">관리비 ({preview.appliedGeneralAdminRate.toFixed(2).replace(/\.00$/, "")}%)</span>
+                    <span className="v num">{won(preview.adminCost)}</span>
+                  </div>
+                  <div className="sr">
+                    <span className="l">이윤 ({preview.appliedProfitRate.toFixed(2).replace(/\.00$/, "")}%)</span>
+                    <span className="v num">{won(preview.profitAmount)}</span>
+                  </div>
+                  <div className="sr">
+                    <span className="l">VAT</span>
+                    <span className="v num">{won(preview.vatAmount)}</span>
+                  </div>
+                </div>
+                <div className="sidebar-final">
+                  <span className="l">최종 견적</span>
+                  <span className="v num">{won(preview.quoteAmount)}</span>
+                </div>
+                {error && (
+                  <p className="form-error" role="alert">
+                    {error}
+                  </p>
+                )}
+                <div className="sidebar-actions">
+                  <button type="button" className="btn btn-secondary" onClick={handleSubmit} disabled={isPending}>
+                    임시저장
+                  </button>
+                  <button type="button" className="btn btn-primary" onClick={handleSubmit} disabled={isPending}>
+                    {isPending ? "저장 중..." : "견적서 생성"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="sidebar-empty">현장정보와 역할별 인원·시급을 입력하면 실시간으로 계산됩니다.</div>
+            )}
           </div>
-        ) : (
-          <p className="text-sm text-gray-400">현장정보와 역할별 인원·시급을 입력하면 실시간으로 계산됩니다.</p>
-        )}
-      </section>
-
-      {error && (
-        <p className="text-sm text-red-600" role="alert">
-          {error}
-        </p>
-      )}
-
-      <button
-        type="button"
-        onClick={handleSubmit}
-        disabled={!preview || isPending}
-        className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-      >
-        {isPending ? "저장 중..." : "견적 저장"}
-      </button>
-    </div>
-  );
-}
-
-function won(amount: number) {
-  return `${Math.round(amount).toLocaleString()}원`;
-}
-
-function Row({ label, value, bold, large }: { label: string; value: string; bold?: boolean; large?: boolean }) {
-  return (
-    <div className={`flex justify-between ${bold ? "font-semibold" : ""} ${large ? "text-base" : ""}`}>
-      <span className="text-gray-500">{label}</span>
-      <span>{value}</span>
-    </div>
-  );
-}
-
-function TextField({
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium">{label}</label>
-      <input
-        type="text"
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-      />
-    </div>
-  );
-}
-
-function TextAreaField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium">{label}</label>
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        rows={2}
-        className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-      />
-    </div>
-  );
-}
-
-function NumberField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number | "";
-  onChange: (v: number | "") => void;
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium">{label}</label>
-      <input
-        type="number"
-        value={value}
-        onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
-        className="w-28 rounded-md border border-gray-300 px-3 py-2 text-sm"
-      />
-    </div>
-  );
-}
-
-function SelectField({
-  label,
-  value,
-  onChange,
-  options,
-  labels,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: string[];
-  labels?: Record<string, string>;
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium">{label}</label>
-      <select value={value} onChange={(e) => onChange(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {labels?.[opt] ?? opt}
-          </option>
-        ))}
-      </select>
-    </div>
+        </div>
+      </div>
+    </>
   );
 }

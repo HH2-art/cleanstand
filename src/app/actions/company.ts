@@ -17,6 +17,20 @@ function parseRate(raw: FormDataEntryValue | null, fieldLabel: string): number |
   return value;
 }
 
+/**
+ * 비밀번호 변경 필드가 비어있으면 null(변경 안 함). 둘 다 있으면 형식 검증 후 새 비밀번호를
+ * 반환한다. 실제 supabase.auth.updateUser() 호출은 이미 세션 쿠키를 쥔 서버 클라이언트로
+ * 하므로(signIn/signOut과 동일한 createClient()), 재인증 플로우가 따로 필요 없다.
+ */
+function validatePasswordChange(formData: FormData): { newPassword: string } | { error: string } | null {
+  const newPassword = String(formData.get("new_password") ?? "");
+  const confirmPassword = String(formData.get("confirm_password") ?? "");
+  if (!newPassword && !confirmPassword) return null;
+  if (newPassword.length < 8) return { error: "비밀번호는 8자 이상이어야 합니다." };
+  if (newPassword !== confirmPassword) return { error: "비밀번호가 일치하지 않습니다." };
+  return { newPassword };
+}
+
 const MAX_LOGO_BYTES = 5 * 1024 * 1024; // 5MB
 const LOGO_MIME_EXT: Record<string, string> = {
   "image/png": "png",
@@ -83,6 +97,9 @@ export async function upsertCompany(
   const vatRate = parseRate(formData.get("vat_rate"), "VAT율");
   if (typeof vatRate !== "number") return vatRate;
 
+  const passwordChange = validatePasswordChange(formData);
+  if (passwordChange && "error" in passwordChange) return passwordChange;
+
   const businessRegistrationNumber = String(formData.get("business_registration_number") ?? "").trim() || null;
   const representativeName = String(formData.get("representative_name") ?? "").trim() || null;
   const address = String(formData.get("address") ?? "").trim() || null;
@@ -115,6 +132,11 @@ export async function upsertCompany(
 
   if (companyRow) {
     await logActivity(supabase, companyRow.id, user.id, "company_updated", `"${name}" 회사 설정을 수정했습니다.`);
+  }
+
+  if (passwordChange) {
+    const { error: passwordError } = await supabase.auth.updateUser({ password: passwordChange.newPassword });
+    if (passwordError) return { error: `비밀번호 변경에 실패했습니다: ${passwordError.message}` };
   }
 
   revalidatePath("/settings/company");

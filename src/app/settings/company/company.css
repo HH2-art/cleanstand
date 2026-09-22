@@ -1,0 +1,77 @@
+/* Company settings page styles — ported verbatim (same selectors minus scope
+   prefix, same property values) from the 회사설정 design canvas
+   (https://claude.ai/artifact/WovPr2VDepdmGfXaxb2HmH, Main.dc.html).
+   Tokens (--bg, --surface, --brand, ...) come from ../../../styles/app-shell.css
+   (.cs-app-shell scope) — always shared, never redeclared here. Scoped under
+   .company-page for the same cross-page-collision reason as the other ported
+   pages; .company-container carries this canvas's own main-inner box model
+   (max-width 1360px, not the shared .main-inner's 1560px), same split used by
+   employees/productivity. */
+
+.company-container {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 24px 32px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.company-page .page-head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.company-page .page-head .crumb { font-size: 12.5px; color: var(--text-muted); }
+.company-page .page-head h1 { font-size: 24px; margin-top: 4px; }
+.company-page .page-head p { margin-top: 6px; font-size: 13.5px; color: var(--text-secondary); }
+
+.company-page .save-btn { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; margin-top: 4px; }
+.company-page .save-btn svg { flex-shrink: 0; }
+
+.company-page .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; }
+.company-page .card > h2 { font-size: 16px; margin-bottom: 18px; }
+
+.company-page .card-header-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.company-page .card-icon { width: 36px; height: 36px; border-radius: 50%; background: var(--brand-subtle); color: var(--brand);
+  display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; }
+.company-page .card-header-row h2 { margin-bottom: 2px; }
+.company-page .card-subcopy { font-size: 13px; color: var(--text-muted); }
+
+.company-page .field { display: flex; flex-direction: column; gap: 8px; }
+.company-page .field label { font-size: 13px; font-weight: 500; color: var(--text); }
+.company-page .field .req { color: var(--brand); }
+.company-page .field input {
+  height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface);
+  font-size: 14px; color: var(--text); width: 100%;
+}
+.company-page .field input:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+
+.company-page .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.company-page .field-grid.single { grid-template-columns: 1fr; }
+
+.company-page .rate-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.company-page .pct-field-wrap { position: relative; }
+.company-page .pct-field-wrap input { padding-right: 32px; }
+.company-page .pct-suffix { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--text-muted); pointer-events: none; }
+
+.company-page .form-msg { font-size: 13.5px; margin: 0; }
+.company-page .form-msg.error { color: var(--error); }
+.company-page .form-msg.success { color: var(--success); }
+
+.company-page .company-info-row { display: flex; gap: 28px; margin-bottom: 4px; }
+.company-page .logo-col { display: flex; flex-direction: column; align-items: center; gap: 10px; flex-shrink: 0; width: 128px; }
+.company-page .logo-square { width: 96px; height: 96px; border-radius: 16px; background: var(--brand); color: #fff;
+  display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+.company-page .logo-square img { width: 100%; height: 100%; object-fit: contain; }
+.company-page .logo-square .ph { font-size: 32px; font-weight: 700; }
+.company-page .logo-change-btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 7px;
+  border: 1px solid var(--border); background: var(--surface); font-size: 12.5px; font-weight: 500; color: var(--text); cursor: pointer; }
+.company-page .logo-change-btn:hover { background: var(--surface-hover); }
+.company-page .logo-hint { font-size: 11px; color: var(--text-muted); text-align: center; }
+
+.company-page .fields-col { flex: 1; min-width: 0; }
+.company-page .subsection-label { font-size: 13px; font-weight: 600; color: var(--text); margin: 18px 0 12px; padding-top: 18px;
+  border-top: 1px solid var(--border-subtle); }
+
+.company-page .btn { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 20px;
+  border-radius: 8px; font-size: 14px; font-weight: 500; border: 1px solid transparent; cursor: pointer; }
+.company-page .btn-primary { background: var(--brand); color: #fff; }
+.company-page .btn-primary:hover { background: var(--brand-hover); }
+.company-page .btn-primary:disabled { background: var(--border-strong); cursor: not-allowed; }

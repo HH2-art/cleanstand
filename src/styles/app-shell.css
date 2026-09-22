@@ -1,0 +1,46 @@
+/*
+ * Shared app-shell tokens/layout — ported verbatim (same selectors minus the
+ * `.cs-app-shell` scope prefix, same property values) from the CleanStand
+ * Dashboard design canvas (Main.dc.html), so real screens reusing
+ * <AppSidebar> match the canvas pixel-for-pixel. Scoped under .cs-app-shell
+ * instead of :root/body so it never leaks into unrelated pages (login,
+ * signup, ...) that don't use this shell.
+ */
+.cs-app-shell {
+  --bg: #F8F9FA; --surface: #FFFFFF; --surface-subtle: #F1F3F5; --surface-hover: #F5F7F9;
+  --text: #17191C; --text-secondary: #5F6368; --text-muted: #8A9099; --text-disabled: #B8BDC5;
+  --border: #E5E7EB; --border-subtle: #EEF0F2; --border-strong: #D5D9DE;
+  --brand: #2563EB; --brand-hover: #1D4ED8; --brand-active: #1E40AF; --brand-subtle: #EFF6FF; --brand-border: #BFDBFE;
+  --success: #16A34A; --success-subtle: #F0FDF4;
+  --warning: #D97706; --warning-subtle: #FFFBEB;
+  --error: #DC2626; --error-subtle: #FEF2F2;
+  --status-lost: #F59E0B; --status-lost-subtle: #FFFBEB;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.06);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,.08);
+  --ease: cubic-bezier(0.25, 1, 0.5, 1);
+
+  background: var(--bg);
+  color: var(--text);
+  font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.cs-app-shell * { box-sizing: border-box; }
+.cs-app-shell a { color: var(--brand); text-decoration: none; }
+.cs-app-shell button, .cs-app-shell input, .cs-app-shell select, .cs-app-shell textarea { font-family: inherit; }
+.cs-app-shell *:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.cs-app-shell .num { font-variant-numeric: tabular-nums; }
+.cs-app-shell h1, .cs-app-shell h2, .cs-app-shell h3, .cs-app-shell h4 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+
+.cs-app-shell.shell { display: flex; min-height: 100vh; }
+
+.cs-app-shell .main { flex: 1; min-width: 0; }
+.cs-app-shell .main-inner { max-width: 1560px; margin: 0 auto; padding: 20px 32px; }
+.cs-app-shell .page-title { font-size: 20px; margin-bottom: 14px; }
+
+@media (max-width: 860px) {
+  .cs-app-shell.shell { flex-direction: column; }
+  .cs-app-shell .main-inner { padding: 28px 20px 60px; }
+}

@@ -182,6 +182,7 @@ export interface PastQuoteSummary {
   mode: "private" | "public";
   quoteAmount: number;
   createdAt: string;
+  roles: string; // "단순노무종사원 2명·작업반장 1명" — quote_line_items(category='labor')에서 조립
 }
 
 /** 새 견적 화면의 "지난 견적 참고" 목록 — 같은 건물유형의 최근 견적 5건. */
@@ -198,7 +199,31 @@ export async function listPastQuotesByBuildingType(buildingType: string): Promis
     .order("created_at", { ascending: false })
     .limit(5);
 
-  return (data ?? []).map((row) => ({
+  const quotes = data ?? [];
+  if (quotes.length === 0) return [];
+
+  // quote_line_items.role_name은 public/private 모두 실제 한글 라벨을 그대로 담고 있어
+  // (getQuoteForReuse의 REUSE_PUBLIC_ROLE_BY_LABEL 역매핑이 이걸 전제로 한다), 모드
+  // 구분 없이 "역할명 N명"을 순서대로 이어붙이면 된다.
+  const { data: laborItems } = await supabase
+    .from("quote_line_items")
+    .select("quote_id, role_name, worker_count, sort_order")
+    .in(
+      "quote_id",
+      quotes.map((q) => q.id),
+    )
+    .eq("category", "labor")
+    .order("sort_order");
+
+  const rolesByQuoteId = new Map<string, string>();
+  for (const item of laborItems ?? []) {
+    if (!item.role_name || !item.worker_count) continue;
+    const entry = `${item.role_name} ${Math.round(Number(item.worker_count))}명`;
+    const prev = rolesByQuoteId.get(item.quote_id);
+    rolesByQuoteId.set(item.quote_id, prev ? `${prev}·${entry}` : entry);
+  }
+
+  return quotes.map((row) => ({
     id: row.id,
     buildingName: row.building_name ?? "-",
     areaSqm: Number(row.area_sqm),
@@ -206,6 +231,7 @@ export async function listPastQuotesByBuildingType(buildingType: string): Promis
     mode: row.mode,
     quoteAmount: Number(row.quote_amount),
     createdAt: row.created_at,
+    roles: rolesByQuoteId.get(row.id) ?? "",
   }));
 }
 

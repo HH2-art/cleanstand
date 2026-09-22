@@ -1,0 +1,92 @@
+/* Productivity page styles — no design canvas exists for this screen, so this
+   reuses the same tokens/patterns already established for the dashboard/
+   employees/company pages (src/styles/app-shell.css + the .card/.badge/.btn
+   conventions from employees.css) rather than porting anything verbatim.
+   Scoped under .productivity-page for the same cross-page-collision reason
+   as the other pages' CSS. */
+
+.productivity-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.productivity-page .page-head h1 { font-size: 22px; }
+.productivity-page .page-head p { margin-top: 4px; font-size: 13px; color: var(--text-secondary); }
+
+.productivity-page .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; }
+
+.productivity-page .section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.productivity-page .section-title-row { display: flex; align-items: center; gap: 8px; }
+.productivity-page .section-title-row h2 { font-size: 16px; }
+.productivity-page .count-badge { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 9999px;
+  background: var(--brand-subtle); color: var(--brand); font-size: 11.5px; font-weight: 600; }
+.productivity-page .section-note { margin-top: 4px; font-size: 12.5px; color: var(--text-muted); }
+
+/* 업무유형 아이콘 — 사이드바 아이콘과 같은 스타일(24x24, stroke 1.75)로 새로 그렸다.
+   해당 캔버스가 없어서 참고 스크린샷의 아이콘을 그대로 가져올 순 없었다. */
+.productivity-page .wt-row { display: flex; align-items: center; gap: 10px; }
+.productivity-page .wt-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--brand-subtle); color: var(--brand);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.productivity-page .wt-icon.custom { background: var(--surface-subtle); color: var(--text-secondary); }
+.productivity-page .wt-name { font-size: 13.5px; font-weight: 500; color: var(--text); }
+
+.productivity-page table.pt-table { width: 100%; border-collapse: collapse; }
+.productivity-page table.pt-table th { text-align: left; font-size: 12px; font-weight: 500; color: var(--text-secondary);
+  background: var(--bg); height: 36px; padding: 0 12px; border-bottom: 1px solid var(--border); }
+.productivity-page table.pt-table th.num { text-align: right; }
+.productivity-page table.pt-table td { height: 56px; padding: 0 12px; border-bottom: 1px solid var(--border-subtle); font-size: 13px; color: var(--text); }
+.productivity-page table.pt-table td.num { text-align: right; }
+.productivity-page table.pt-table td.actions { text-align: right; white-space: nowrap; }
+.productivity-page table.pt-table td.actions form { display: inline; }
+.productivity-page table.pt-table .muted-cell { color: var(--text-muted); }
+
+.productivity-page .rate-input { width: 88px; height: 32px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface); font-size: 13px; }
+.productivity-page .rate-input:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+.productivity-page .rate-input.overridden { border-color: var(--brand-border); background: var(--brand-subtle); }
+.productivity-page .rate-input-row { display: flex; align-items: center; gap: 8px; }
+.productivity-page .name-input { width: 140px; height: 32px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface); font-size: 13px; }
+.productivity-page .name-input:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+
+.productivity-page .badge { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 9999px;
+  font-size: 11.5px; font-weight: 500; white-space: nowrap; }
+.productivity-page .badge-source-default { background: var(--surface-subtle); color: var(--text-secondary); }
+.productivity-page .badge-source-custom { background: var(--brand-subtle); color: var(--brand); }
+
+.productivity-page .btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; border-radius: 8px;
+  font-size: 13px; font-weight: 500; border: 1px solid transparent; cursor: pointer; }
+.productivity-page .btn-primary { background: var(--brand); color: #fff; }
+.productivity-page .btn-primary:hover { background: var(--brand-hover); }
+.productivity-page .btn-outline { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 9999px;
+  border: 1px solid var(--brand-border); background: var(--surface); color: var(--brand); font-size: 12px; font-weight: 500; cursor: pointer; }
+.productivity-page .btn-outline:hover { background: var(--brand-subtle); }
+.productivity-page .btn-outline.neutral { border-color: var(--border); color: var(--text-secondary); }
+.productivity-page .btn-outline.neutral:hover { background: var(--surface-hover); }
+.productivity-page .btn-text { background: none; border: none; padding: 0; font-size: 12.5px; font-weight: 500; color: var(--brand); cursor: pointer; }
+.productivity-page .btn-text:hover { text-decoration: underline; }
+.productivity-page .btn-text.danger { color: var(--error); }
+.productivity-page .btn-text.muted { color: var(--text-muted); }
+
+.productivity-page .add-form { margin-top: 12px; padding: 16px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface-subtle); display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.productivity-page .add-form .field { display: flex; flex-direction: column; gap: 5px; }
+.productivity-page .add-form .field label { font-size: 12.5px; font-weight: 500; color: var(--text); }
+.productivity-page .add-form input[type="text"], .productivity-page .add-form input[type="number"] {
+  height: 36px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface); font-size: 13px; width: 160px;
+}
+.productivity-page .add-form input:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+
+.productivity-page .empty-hint { font-size: 13px; color: var(--text-muted); }
+
+.productivity-page details > summary { list-style: none; cursor: pointer; }
+.productivity-page details > summary::-webkit-details-marker { display: none; }
+.productivity-page .actions-row { display: inline-flex; align-items: center; gap: 12px; }
+
+.productivity-page .info-banner { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: 10px;
+  background: var(--brand-subtle); color: var(--brand-active); font-size: 12.5px; line-height: 1.5; }
+.productivity-page .info-banner svg { flex-shrink: 0; margin-top: 1px; }

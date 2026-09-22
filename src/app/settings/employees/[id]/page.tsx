@@ -1,4 +1,7 @@
 import { notFound } from "next/navigation";
+import "@/styles/app-shell.css";
+import "../employees.css";
+import { AppSidebar } from "@/components/layout/AppSidebar";
 import { updateEmployee } from "@/app/actions/employees";
 import { requireCurrentCompany } from "@/lib/company";
 import { createClient } from "@/lib/supabase/server";
@@ -19,9 +22,21 @@ export default async function EditEmployeePage({ params }: { params: Promise<{ i
   if (!employee) notFound();
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-4 py-12">
-      <h1 className="text-2xl font-bold">직원 정보 수정</h1>
-      <EmployeeForm action={updateEmployee} defaultValues={employee} submitLabel="저장" />
-    </main>
+    <div className="cs-app-shell shell">
+      <AppSidebar current="employees" companyName={company.name} />
+      <div className="main">
+        <div className="employees-page employees-container">
+          <div className="page-head">
+            <h1>직원 정보 수정</h1>
+            <p>{company.name}</p>
+          </div>
+
+          <div className="card" style={{ maxWidth: 480 }}>
+            <h2>직원 정보</h2>
+            <EmployeeForm action={updateEmployee} defaultValues={employee} submitLabel="저장" />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

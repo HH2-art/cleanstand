@@ -1,3 +1,6 @@
+import "@/styles/app-shell.css";
+import "./new-quote.css";
+import { AppSidebar } from "@/components/layout/AppSidebar";
 import { requireCurrentCompany } from "@/lib/company";
 import { mergeProductivityRates } from "@/lib/productivityMerge";
 import { createClient } from "@/lib/supabase/server";
@@ -39,22 +42,24 @@ export default async function NewQuotePage() {
     : null;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 px-4 py-12">
-      <div>
-        <h1 className="text-2xl font-bold">새 견적 만들기</h1>
-        <p className="mt-1 text-sm text-gray-500">{company.name}</p>
+    <div className="cs-app-shell shell">
+      <AppSidebar current="new-quote" companyName={company.name} />
+      <div className="main">
+        <div className="quotes-new-page">
+          <NewQuoteForm
+            company={{
+              name: company.name,
+              generalAdminRate: company.general_admin_rate,
+              profitRate: company.profit_rate,
+              vatRate: company.vat_rate,
+            }}
+            roleRates={roleRates ?? []}
+            productivityRates={productivityRates}
+            expenseItems={expenseItems ?? []}
+            regulation={regulation}
+          />
+        </div>
       </div>
-      <NewQuoteForm
-        company={{
-          generalAdminRate: company.general_admin_rate,
-          profitRate: company.profit_rate,
-          vatRate: company.vat_rate,
-        }}
-        roleRates={roleRates ?? []}
-        productivityRates={productivityRates}
-        expenseItems={expenseItems ?? []}
-        regulation={regulation}
-      />
-    </main>
+    </div>
   );
 }

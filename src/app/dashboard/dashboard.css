@@ -1,0 +1,101 @@
+/* Dashboard page styles — ported verbatim from the CleanStand Dashboard
+   design canvas (Main.dc.html). Relies on tokens from
+   src/styles/app-shell.css (.dashboard-page scope). */
+
+.dashboard-page .filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--border); }
+.dashboard-page .filter-group { display: flex; flex-direction: column; gap: 5px; }
+.dashboard-page .filter-group .fl { font-size: 11.5px; font-weight: 600; color: var(--text-secondary); }
+.dashboard-page .search-input { height: 30px; width: 190px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--border);
+  background: var(--surface); font-size: 12.5px; color: var(--text); }
+.dashboard-page .search-input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(37,99,235,.12); outline: none; }
+.dashboard-page .filter-pills { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.dashboard-page .filter-pill { height: 28px; padding: 0 12px; border-radius: 9999px; border: 1px solid var(--border);
+  background: var(--surface); font-size: 12px; font-weight: 500; color: var(--text-secondary); cursor: pointer; }
+.dashboard-page .filter-pill:hover { background: var(--surface-hover); }
+.dashboard-page .filter-actions { display: flex; align-items: center; margin-left: auto; padding-bottom: 2px; }
+.dashboard-page .btn { display: inline-flex; align-items: center; justify-content: center; height: 36px; padding: 0 16px;
+  border-radius: 8px; font-size: 13px; font-weight: 500; border: 1px solid transparent; cursor: pointer; }
+.dashboard-page .btn-primary { background: var(--brand); color: #fff; }
+.dashboard-page .btn-primary:hover { background: var(--brand-hover); }
+.dashboard-page .reset-link { font-size: 12.5px; color: var(--text-muted); background: none; border: none; cursor: pointer; }
+.dashboard-page .reset-link:hover { color: var(--text-secondary); text-decoration: underline; }
+
+.dashboard-page table.quote-table { width: 100%; border-collapse: collapse; }
+.dashboard-page table.quote-table th { text-align: left; font-size: 12px; font-weight: 500; color: var(--text-secondary);
+  background: var(--bg); height: 32px; padding: 0 14px; border-bottom: 1px solid var(--border); }
+.dashboard-page table.quote-table th.amount { text-align: right; }
+.dashboard-page table.quote-table td { height: 38px; padding: 0 14px; border-bottom: 1px solid var(--border-subtle); font-size: 13px; color: var(--text); }
+.dashboard-page table.quote-table td.amount { text-align: right; font-weight: 500; }
+.dashboard-page table.quote-table tbody tr { cursor: pointer; transition: background .12s var(--ease); }
+.dashboard-page table.quote-table tbody tr:hover { background: var(--surface-hover); }
+.dashboard-page table.quote-table tbody tr:hover .row-link { color: var(--brand); }
+.dashboard-page .row-link { color: var(--text); font-weight: 500; }
+.dashboard-page .muted-cell { color: var(--text-muted); }
+
+.dashboard-page .pagination { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
+.dashboard-page .page-summary { font-size: 12px; color: var(--text-muted); margin-right: auto; }
+.dashboard-page .page-btn { height: 26px; min-width: 26px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface); font-size: 12px; font-weight: 500; color: var(--text-secondary); cursor: pointer; }
+.dashboard-page .page-btn:hover { background: var(--surface-hover); }
+.dashboard-page .page-btn:disabled { opacity: .4; cursor: not-allowed; }
+.dashboard-page .page-btn.active { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+
+.dashboard-page .badge { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 9999px; font-size: 11.5px; font-weight: 500; white-space: nowrap; }
+.dashboard-page .badge-mode-private { background: var(--surface-subtle); color: var(--text-secondary); }
+.dashboard-page .badge-mode-public { background: var(--brand-subtle); color: var(--brand); }
+.dashboard-page .badge-neutral { background: var(--surface-subtle); color: var(--text-secondary); }
+.dashboard-page .badge-brand { background: var(--brand-subtle); color: var(--brand); }
+.dashboard-page .badge-success { background: var(--success-subtle); color: var(--success); }
+.dashboard-page .badge-error { background: var(--error-subtle); color: var(--error); }
+.dashboard-page .badge-lost { background: var(--status-lost-subtle); color: var(--status-lost); }
+
+.dashboard-page .empty-state { padding: 48px 24px; text-align: center; border: 1px dashed var(--border-strong); border-radius: 12px; }
+.dashboard-page .empty-state p { font-size: 13.5px; color: var(--text-secondary); margin-bottom: 16px; }
+
+.dashboard-page .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
+.dashboard-page .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; box-shadow: var(--shadow-sm); }
+.dashboard-page .kpi-label { font-size: 11.5px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px; }
+.dashboard-page .kpi-value { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 3px; }
+.dashboard-page .kpi-delta { font-size: 11.5px; font-weight: 500; }
+.dashboard-page .kpi-delta.up { color: var(--success); }
+.dashboard-page .kpi-delta.down { color: var(--error); }
+.dashboard-page .kpi-delta.flat { color: var(--text-muted); }
+.dashboard-page .kpi-caption { font-size: 11.5px; color: var(--text-muted); }
+
+.dashboard-page .section-title { font-size: 14px; font-weight: 600; margin: 0 0 8px; }
+.dashboard-page .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 14px; }
+.dashboard-page .table-card .filters { margin-bottom: 4px; }
+
+.dashboard-page .bottom-grid { display: flex; flex-wrap: wrap; gap: 14px; }
+.dashboard-page .chart-card { flex: 1 1 320px; min-width: 280px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; }
+
+.dashboard-page .activity-list { display: flex; flex-direction: column; gap: 6px; }
+.dashboard-page .activity-row { display: flex; align-items: flex-start; gap: 10px; padding: 4px 0; }
+.dashboard-page .activity-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; background: var(--brand); }
+.dashboard-page .activity-body { flex: 1; min-width: 0; }
+.dashboard-page .activity-desc { font-size: 12.5px; color: var(--text); line-height: 1.4; }
+.dashboard-page .activity-desc b { font-weight: 600; }
+.dashboard-page .activity-time { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+.dashboard-page .chart-divider { height: 1px; background: var(--border-subtle); margin: 14px 0; }
+.dashboard-page .donut-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.dashboard-page .donut { width: 108px; height: 108px; border-radius: 50%; flex-shrink: 0; position: relative; }
+.dashboard-page .donut-center { position: absolute; inset: 13px; background: var(--surface); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.dashboard-page .donut-center .n { font-size: 17px; font-weight: 700; }
+.dashboard-page .donut-center .l { font-size: 10px; color: var(--text-muted); }
+.dashboard-page .legend { display: flex; flex-direction: column; gap: 7px; flex: 1 1 140px; min-width: 140px; }
+.dashboard-page .legend-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.dashboard-page .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dashboard-page .legend-label { color: var(--text-secondary); flex: 1; }
+.dashboard-page .legend-value { font-weight: 600; }
+
+.dashboard-page .bars { display: flex; flex-direction: column; gap: 9px; }
+.dashboard-page .bar-head { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+.dashboard-page .bar-head .lbl { color: var(--text-secondary); }
+.dashboard-page .bar-head .val { font-weight: 600; }
+.dashboard-page .bar-track { height: 7px; border-radius: 999px; background: var(--surface-subtle); overflow: hidden; }
+.dashboard-page .bar-fill { height: 100%; border-radius: 999px; background: var(--brand); }
+
+@media (max-width: 720px) {
+  .dashboard-page .kpi-grid { grid-template-columns: 1fr; }
+}

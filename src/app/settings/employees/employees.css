@@ -1,0 +1,132 @@
+/* Employees page styles — ported verbatim from the CleanStand Employees
+   design canvas (Main.dc.html). Relies on tokens from
+   src/styles/app-shell.css (.cs-app-shell scope). Scoped under
+   .employees-page (not .cs-app-shell) for the same reason as the dashboard
+   and new-quote pages: this canvas's own .card/.btn/.field/etc. use
+   different values than the other canvases' classes of the same name. */
+
+/* 캔버스의 .main-inner는 이 캔버스에서만 max-width 1360px + flex column + gap 16px였다
+   (대시보드 캔버스는 1560px, 새견적 캔버스는 아예 안 씀) — 공유 app-shell.css의
+   .main-inner(1560px, flex 없음)와 값이 달라서 같은 클래스에 얹으면 충돌하므로,
+   직원관리 메인 페이지 전용 컨테이너 클래스를 따로 둔다. .employees-page 자체는
+   스코프 마커일 뿐 자기 박스모델 규칙이 없다 — EmployeeForm이 직원수정([id]) 페이지처럼
+   전혀 다른 레이아웃(Tailwind max-w-md 등) 안에서도 재사용되기 때문에, 그 페이지의
+   레이아웃과 절대 충돌하면 안 된다. */
+.employees-container {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.employees-page .page-head h1 { font-size: 22px; }
+.employees-page .page-head p { margin-top: 4px; font-size: 13px; color: var(--text-secondary); }
+
+.employees-page .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+.employees-page .card h2 { font-size: 15px; margin-bottom: 12px; }
+.employees-page .card-note { font-size: 13px; color: var(--text-muted); }
+
+/* 2단 컬럼 — 오른쪽 폼이 왼쪽(표준원가+목록) 합친 높이에 맞춰 같이 늘어나게 stretch */
+.employees-page .two-col { display: flex; flex-wrap: wrap; align-items: stretch; gap: 16px; }
+.employees-page .col-left { flex: 1 1 60%; min-width: 460px; display: flex; flex-direction: column; gap: 16px; }
+.employees-page .col-right { flex: 1 1 38%; min-width: 380px; }
+.employees-page .col-right .card { height: 100%; display: flex; flex-direction: column; }
+.employees-page .form-body { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+
+/* 역할별 표준원가 */
+.employees-page .rate-rows { display: flex; flex-direction: column; gap: 8px; }
+.employees-page .rate-row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 10px 14px;
+  background: var(--surface-subtle); border-radius: 8px; }
+.employees-page .rate-row .role-name { font-weight: 600; font-size: 13.5px; min-width: 90px; }
+.employees-page .rate-row .rate-val { font-size: 13px; color: var(--text-secondary); }
+.employees-page .rate-row .rate-src { font-size: 11.5px; font-weight: 500; }
+.employees-page .rate-src.auto { color: var(--text-muted); }
+.employees-page .rate-src.manual { color: var(--brand); }
+.employees-page .rate-row .spacer { flex: 1; }
+.employees-page .rate-input-wrap { display: flex; align-items: center; gap: 6px; }
+.employees-page .rate-input { width: 100px; height: 30px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--brand-border);
+  background: var(--surface); font-size: 13px; }
+.employees-page .rate-input:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+.employees-page .rate-unit { font-size: 12px; color: var(--text-muted); }
+
+/* 자동계산/수동설정 토글 스위치 */
+.employees-page .rate-toggle { position: relative; width: 38px; height: 21px; flex-shrink: 0; cursor: pointer; }
+.employees-page .rate-toggle input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.employees-page .rate-toggle .track { position: absolute; inset: 0; background: var(--border-strong); border-radius: 999px; pointer-events: none; transition: background .15s var(--ease); }
+.employees-page .rate-toggle .thumb { position: absolute; top: 2px; left: 2px; width: 17px; height: 17px; border-radius: 50%; background: #fff;
+  box-shadow: var(--shadow-sm); pointer-events: none; transition: transform .15s var(--ease); }
+.employees-page .rate-toggle input:checked ~ .track { background: var(--brand); }
+.employees-page .rate-toggle input:checked ~ .thumb { transform: translateX(17px); }
+
+.employees-page .rate-actions { display: flex; align-items: center; gap: 10px; }
+/* 캔버스는 가짜 sc-if라 래핑 엘리먼트가 필요 없었지만, 실제 <form>은 DOM에 실존해야 해서
+   .rate-row/.rate-actions의 flex 레이아웃에 끼어들지 않도록 display:contents로 지운다 —
+   시각적으로는 canvas와 완전히 동일하다. */
+.employees-page .rate-row-edit-form,
+.employees-page .rate-actions form { display: contents; }
+.employees-page .role-edit-input { width: 110px; height: 28px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--brand-border);
+  background: var(--surface); font-size: 13px; }
+.employees-page .role-edit-input:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+.employees-page .rate-warning { flex-basis: 100%; margin-top: 6px; padding: 8px 10px; background: var(--error-subtle); color: var(--error);
+  font-size: 12px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.employees-page .rate-warning button { background: none; border: none; color: var(--error); font-size: 12px; font-weight: 500; cursor: pointer; text-decoration: underline; }
+
+/* 직원 목록 */
+.employees-page .list-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.employees-page .list-head h2 { margin-bottom: 0; }
+.employees-page .search-input { height: 32px; width: 200px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--border);
+  background: var(--surface); font-size: 12.5px; color: var(--text); }
+.employees-page .search-input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(37,99,235,.12); outline: none; }
+
+.employees-page table.emp-table { width: 100%; border-collapse: collapse; }
+.employees-page table.emp-table th { text-align: left; font-size: 12px; font-weight: 500; color: var(--text-secondary);
+  background: var(--bg); height: 34px; padding: 0 12px; border-bottom: 1px solid var(--border); }
+.employees-page table.emp-table td { height: 42px; padding: 0 12px; border-bottom: 1px solid var(--border-subtle); font-size: 13px; color: var(--text); }
+.employees-page table.emp-table tr.inactive td { color: var(--text-muted); }
+.employees-page table.emp-table td.muted-cell { color: var(--text-muted); }
+.employees-page table.emp-table td.actions { text-align: right; white-space: nowrap; }
+.employees-page table.emp-table td.actions a, .employees-page table.emp-table td.actions button { font-size: 12px; }
+.employees-page table.emp-table td.actions .del { color: var(--error); background: none; border: none; cursor: pointer; margin-left: 12px; font-family: inherit; }
+.employees-page table.emp-table td.actions .del:hover { text-decoration: underline; }
+.employees-page table.emp-table td.actions form { display: inline; }
+.employees-page .confirm-text { font-size: 12px; color: var(--text-secondary); margin-right: 6px; }
+
+.employees-page .btn-text { background: none; border: none; padding: 0; font-size: 12px; font-weight: 500; color: var(--brand); cursor: pointer; }
+.employees-page .btn-text:hover { text-decoration: underline; }
+.employees-page .btn-text.muted { color: var(--text-muted); }
+
+.employees-page .pagination { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
+.employees-page .page-summary { font-size: 12px; color: var(--text-muted); margin-right: auto; }
+.employees-page .page-btn { height: 26px; min-width: 26px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface); font-size: 12px; font-weight: 500; color: var(--text-secondary); cursor: pointer; }
+.employees-page .page-btn:hover { background: var(--surface-hover); }
+.employees-page .page-btn:disabled { opacity: .4; cursor: not-allowed; }
+.employees-page .page-btn.active { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+
+.employees-page .badge { display: inline-flex; align-items: center; height: 21px; padding: 0 9px; border-radius: 9999px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+.employees-page .badge-active { background: var(--success-subtle); color: var(--success); }
+.employees-page .badge-inactive { background: var(--surface-subtle); color: var(--text-muted); }
+.employees-page .excluded-tag { margin-left: 6px; font-size: 11px; color: var(--text-muted); }
+
+.employees-page .empty-hint { font-size: 13px; color: var(--text-muted); }
+
+/* 새 직원 추가 폼 */
+.employees-page .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.employees-page .field { display: flex; flex-direction: column; gap: 5px; }
+.employees-page .field label { font-size: 12.5px; font-weight: 500; color: var(--text); }
+.employees-page .field .req { color: var(--brand); }
+.employees-page .field input[type="text"], .employees-page .field input[type="number"] {
+  height: 36px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface);
+  font-size: 13px; color: var(--text); width: 100%;
+}
+.employees-page .field input:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+.employees-page .check-row { display: flex; align-items: flex-start; gap: 8px; margin-top: 14px; font-size: 12.5px; color: var(--text-secondary); }
+.employees-page .check-row input { width: 16px; height: 16px; margin-top: 1px; accent-color: var(--brand); flex-shrink: 0; }
+.employees-page .form-error { margin-top: 10px; font-size: 12.5px; color: var(--error); }
+.employees-page .btn { display: inline-flex; align-items: center; justify-content: center; height: 38px; padding: 0 18px;
+  border-radius: 8px; font-size: 13px; font-weight: 500; border: 1px solid transparent; cursor: pointer; margin-top: 14px; }
+.employees-page .btn-primary { background: var(--brand); color: #fff; }
+.employees-page .btn-primary:hover { background: var(--brand-hover); }
+.employees-page .btn-primary:disabled { background: var(--border-strong); cursor: not-allowed; }

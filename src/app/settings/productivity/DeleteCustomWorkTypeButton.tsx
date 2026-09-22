@@ -14,7 +14,7 @@ export function DeleteCustomWorkTypeButton({ workType, name }: { workType: strin
       className="inline"
     >
       <input type="hidden" name="work_type" value={workType} />
-      <button type="submit" className="text-xs text-red-600 underline">
+      <button type="submit" className="btn-text danger">
         삭제
       </button>
     </form>
