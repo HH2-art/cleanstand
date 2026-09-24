@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signOut } from "@/app/actions/auth";
+import { CompanyAvatar } from "@/components/CompanyAvatar";
 import "@/styles/app-shell.css";
 import "./AppSidebar.css";
 
@@ -11,10 +12,20 @@ export type AppSidebarCurrent = "dashboard" | "new-quote" | "employees" | "produ
  * 재사용한다. 캔버스는 외부에 게시된 정적 페이지라 절대경로+target="_blank"였지만,
  * 실제 앱에서는 당연히 내부 상대경로 Link로 바꿨다(유일한 의도적 차이).
  */
-export function AppSidebar({ current, companyName }: { current: AppSidebarCurrent; companyName: string }) {
+export function AppSidebar({
+  current,
+  companyName,
+  logoUrl,
+}: {
+  current: AppSidebarCurrent;
+  companyName: string;
+  logoUrl?: string | null;
+}) {
   return (
     <aside className="sidebar">
-      <div className="sidebar-company">{companyName}</div>
+      <Link href="/" className="sidebar-company">
+        <CompanyAvatar name={companyName} logoUrl={logoUrl} size={28} />
+      </Link>
 
       {current === "dashboard" ? (
         <span className="nav-item current">

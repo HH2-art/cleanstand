@@ -1,0 +1,72 @@
+/* Quote detail page styles — ported verbatim (selectors/property values,
+   minus the design canvas's own :root token block which already matches
+   src/styles/app-shell.css's .cs-app-shell tokens exactly) from the
+   CleanStand Quote Detail design canvas (Main.dc.html). Scoped under
+   .quote-detail-page for the same reason as every other per-page canvas
+   port in this app: its own .card/.btn/.sr/etc. use different values than
+   other canvases' classes of the same name. */
+
+.quote-detail-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 32px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.quote-detail-page .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); width: fit-content; }
+.quote-detail-page .back-link:hover { color: var(--text-secondary); }
+
+.quote-detail-page .header h1 { font-size: clamp(24px, 3.4vw, 32px); }
+.quote-detail-page .header-summary { margin-top: 8px; font-size: 14.5px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.quote-detail-page .header-summary .dot { color: var(--border-strong); }
+.quote-detail-page .mode-badge { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 9999px;
+  background: var(--brand-subtle); color: var(--brand); font-size: 12px; font-weight: 500; }
+
+.quote-detail-page .action-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.quote-detail-page .btn { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: 8px;
+  font-size: 14px; font-weight: 500; border: 1px solid transparent; cursor: pointer; }
+.quote-detail-page .btn-secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
+.quote-detail-page .btn-secondary:hover { background: var(--surface-hover); }
+.quote-detail-page .btn-primary { background: var(--brand); color: #fff; height: 40px; padding: 0 18px; }
+.quote-detail-page .btn-primary:hover { background: var(--brand-hover); }
+.quote-detail-page .btn-primary:disabled { background: var(--border-strong); color: var(--surface); cursor: not-allowed; }
+
+.quote-detail-page .status-block { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
+.quote-detail-page .status-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 10px; }
+.quote-detail-page .status-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.quote-detail-page .status-pill { display: inline-flex; border: 1px solid var(--border); border-radius: 9999px; overflow: hidden; background: var(--surface); }
+.quote-detail-page .status-pill button { border: none; background: none; padding: 9px 16px; font-size: 13px; font-weight: 500;
+  color: var(--text-secondary); cursor: pointer; border-left: 1px solid var(--border); }
+.quote-detail-page .status-pill button:first-child { border-left: none; border-radius: 9999px 0 0 9999px; }
+.quote-detail-page .status-pill button:last-child { border-radius: 0 9999px 9999px 0; }
+.quote-detail-page .status-hint { margin-top: 10px; font-size: 12.5px; color: var(--warning); }
+/* 캔버스엔 없던 요소 — "수정" 버튼을 상태 변경 줄 제일 우측에 배치하기 위한 추가 규칙. */
+.quote-detail-page .status-row .edit-link { margin-left: auto; }
+
+.quote-detail-page .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+.quote-detail-page .card h2 { font-size: 16px; margin-bottom: 4px; }
+
+.quote-detail-page .sr { display: flex; justify-content: space-between; align-items: baseline; padding: 11px 0; border-bottom: 1px solid var(--border-subtle); font-size: 14px; }
+.quote-detail-page .sr:last-of-type { border-bottom: none; }
+.quote-detail-page .sr .l { color: var(--text-secondary); }
+.quote-detail-page .sr .v { color: var(--text); font-weight: 500; }
+.quote-detail-page .sr.indent { padding-left: 16px; }
+.quote-detail-page .sr.indent .l { color: var(--text-muted); font-size: 13px; }
+.quote-detail-page .sr.indent .l::before { content: "— "; }
+.quote-detail-page .sr.indent .v { font-weight: 400; font-size: 13.5px; }
+.quote-detail-page .final-row { margin-top: 8px; padding: 18px 20px; background: var(--brand-subtle); border-radius: 8px;
+  display: flex; justify-content: space-between; align-items: baseline; }
+.quote-detail-page .final-row .l { font-size: 14px; font-weight: 600; color: var(--brand); }
+.quote-detail-page .final-row .v { font-size: 30px; font-weight: 700; color: var(--brand); }
+
+.quote-detail-page .cond-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; margin-top: 14px; }
+.quote-detail-page .cond-row { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border-subtle); font-size: 13.5px; }
+.quote-detail-page .cond-row .l { color: var(--text-muted); }
+.quote-detail-page .cond-row .v { color: var(--text); text-align: right; }
+.quote-detail-page .cond-row.full { grid-column: 1 / -1; }
+
+@media (max-width: 620px) {
+  .quote-detail-page .cond-grid { grid-template-columns: 1fr; }
+}

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export interface DashboardQuoteRow {
   id: string;
@@ -43,18 +44,22 @@ const STATUS_COLORS: Record<string, string> = {
   lost: "var(--status-lost)",
 };
 
+const DONUT_SIZE = 108;
+const DONUT_STROKE = 16;
+const DONUT_RADIUS = DONUT_SIZE / 2 - DONUT_STROKE / 2;
+const DONUT_CIRC = 2 * Math.PI * DONUT_RADIUS;
+
 const PAGE_SIZE = 5;
 
-function fmtDelta(curr: number, prev: number, unit: string) {
-  const diff = curr - prev;
-  if (diff === 0) return { cls: "flat", text: "전월과 동일" };
-  return { cls: diff > 0 ? "up" : "down", text: `${diff > 0 ? "▲" : "▼"} 전월 대비 ${Math.abs(diff)}${unit}` };
-}
-function fmtAmountDelta(curr: number, prev: number) {
-  if (prev === 0) return { cls: curr > 0 ? "up" : "flat", text: curr > 0 ? "▲ 전월 대비 신규" : "전월과 동일" };
+/** KPI 카드 우측 상단 증감 배지 — 지난달 대비 증감률(%). 지난달 값이 0이면 신규 발생만
+ * "up"으로, 그 외엔 변화 없음으로 표시한다(0으로 나누기 방지). */
+function fmtDeltaPill(curr: number, prev: number) {
+  if (prev === 0) {
+    return curr > 0 ? { dir: "up" as const, pct: 100 } : { dir: "flat" as const, pct: 0 };
+  }
   const pct = Math.round(((curr - prev) / prev) * 100);
-  if (pct === 0) return { cls: "flat", text: "전월과 동일" };
-  return { cls: pct > 0 ? "up" : "down", text: `${pct > 0 ? "▲" : "▼"} 전월 대비 ${Math.abs(pct)}%` };
+  if (pct === 0) return { dir: "flat" as const, pct: 0 };
+  return { dir: pct > 0 ? ("up" as const) : ("down" as const), pct: Math.abs(pct) };
 }
 function won(n: number) {
   return Math.round(n).toLocaleString("ko-KR") + "원";
@@ -71,12 +76,22 @@ export function DashboardContent({
   currentMonthKey: string;
   prevMonthKey: string;
 }) {
+  const router = useRouter();
   // 상태/건물유형/검색어 전부 즉시 반영 — 실제 쿼리의 .eq()/.ilike() 조건과 동일하게,
   // 값이 바뀌는 즉시 다시 필터링한다(커밋 버튼 없음).
   const [status, setStatus] = useState("");
   const [buildingType, setBuildingType] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
+
+  // 도넛 그리기 애니메이션 — 마운트 직후 한 프레임 뒤에 true로 바뀌면서
+  // stroke-dasharray가 0에서 실제 값까지 CSS transition으로 자란다.
+  const [donutAnimated, setDonutAnimated] = useState(false);
+  const [hoveredStatus, setHoveredStatus] = useState<string | null>(null);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setDonutAnimated(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   function pillStyle(isActive: boolean) {
     return isActive
@@ -153,12 +168,14 @@ export function DashboardContent({
   ] as const;
   const counts = Object.fromEntries(segDefs.map((s) => [s.key, thisMonthRows.filter((q) => q.status === s.key).length]));
   const nonZero = segDefs.filter((s) => counts[s.key] > 0);
-  let acc = 0;
-  const gradientParts = nonZero.map((s, i) => {
-    const start = acc;
-    const end = i === nonZero.length - 1 ? 100 : acc + Math.round((counts[s.key] / total) * 100);
-    acc = end;
-    return `${STATUS_COLORS[s.key]} ${start}% ${end}%`;
+  // SVG 도넛 — 구간별로 정확한(반올림 없는) 비율을 누적해 stroke-dasharray/dashoffset을 계산한다.
+  // 반올림은 범례 표시용 pct에서만 한다(legend와 동일하게).
+  let cumPct = 0;
+  const donutArcs = nonZero.map((s) => {
+    const pct = (counts[s.key] / total) * 100;
+    const arc = { key: s.key, label: s.label, count: counts[s.key], color: STATUS_COLORS[s.key], startPct: cumPct, pct };
+    cumPct += pct;
+    return arc;
   });
   const donutLegend = segDefs.map((s) => {
     const pct = total ? Math.round((counts[s.key] / total) * 100) : 0;
@@ -178,13 +195,9 @@ export function DashboardContent({
     return { label: b.label, count: cnt, pct, fillStyle: { width: `${pct}%` } };
   });
 
-  const donutStyle = {
-    background: `conic-gradient(${gradientParts.length ? gradientParts.join(",") : "var(--border-subtle) 0% 100%"})`,
-  };
-
   const emptyMessage = hasFilters ? "조건에 맞는 견적이 없습니다." : "아직 만든 견적이 없어요";
-  const kpiCountDelta = fmtDelta(total, prevMonthRows.length, "건");
-  const kpiAmountDelta = fmtAmountDelta(thisMonthAmount, prevMonthAmount);
+  const kpiCountDelta = fmtDeltaPill(total, prevMonthRows.length);
+  const kpiAmountDelta = fmtDeltaPill(thisMonthAmount, prevMonthAmount);
 
   return (
     <>
@@ -192,19 +205,31 @@ export function DashboardContent({
 
       <div className="kpi-grid">
         <div className="kpi-card">
-          <div className="kpi-label">이번 달 견적 수</div>
+          <div className="kpi-head">
+            <span className="kpi-label">이번 달 견적 수</span>
+            <span className={`kpi-pill ${kpiCountDelta.dir}`}>
+              {kpiCountDelta.dir === "up" ? "↑" : kpiCountDelta.dir === "down" ? "↓" : "–"} {kpiCountDelta.pct}%
+            </span>
+          </div>
           <div className="kpi-value num">{total}건</div>
-          <span className={`kpi-delta ${kpiCountDelta.cls}`}>{kpiCountDelta.text}</span>
+          <span className="kpi-caption">지난달 {prevMonthRows.length}건</span>
         </div>
         <div className="kpi-card">
-          <div className="kpi-label">진행 중 견적</div>
+          <div className="kpi-head">
+            <span className="kpi-label">진행 중 견적</span>
+          </div>
           <div className="kpi-value num">{openCount}건</div>
           <span className="kpi-caption">임시저장 + 발송완료 합계</span>
         </div>
         <div className="kpi-card">
-          <div className="kpi-label">이번 달 총 견적금액</div>
+          <div className="kpi-head">
+            <span className="kpi-label">이번 달 총 견적금액</span>
+            <span className={`kpi-pill ${kpiAmountDelta.dir}`}>
+              {kpiAmountDelta.dir === "up" ? "↑" : kpiAmountDelta.dir === "down" ? "↓" : "–"} {kpiAmountDelta.pct}%
+            </span>
+          </div>
           <div className="kpi-value num">{won(thisMonthAmount)}</div>
-          <span className={`kpi-delta ${kpiAmountDelta.cls}`}>{kpiAmountDelta.text}</span>
+          <span className="kpi-caption">지난달 {won(prevMonthAmount)}</span>
         </div>
       </div>
 
@@ -270,9 +295,9 @@ export function DashboardContent({
               </thead>
               <tbody>
                 {pageRows.map((q) => (
-                  <tr key={q.id}>
+                  <tr key={q.id} onClick={() => router.push(`/quotes/${q.id}`)}>
                     <td>
-                      <Link href={`/quotes/${q.id}`} className="row-link">
+                      <Link href={`/quotes/${q.id}`} className="row-link" onClick={(e) => e.stopPropagation()}>
                         {q.name}
                       </Link>
                     </td>
@@ -347,15 +372,59 @@ export function DashboardContent({
         <div className="chart-card">
           <h2 className="section-title">이번 달 견적 현황</h2>
           <div className="donut-wrap">
-            <div className="donut" style={donutStyle}>
+            <div className="donut">
+              <svg width={DONUT_SIZE} height={DONUT_SIZE} viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`} className="donut-svg">
+                <g transform={`rotate(-90 ${DONUT_SIZE / 2} ${DONUT_SIZE / 2})`}>
+                  <circle
+                    cx={DONUT_SIZE / 2}
+                    cy={DONUT_SIZE / 2}
+                    r={DONUT_RADIUS}
+                    fill="none"
+                    stroke="var(--border-subtle)"
+                    strokeWidth={DONUT_STROKE}
+                  />
+                  {donutArcs.map((arc, i) => {
+                    const arcLen = (arc.pct / 100) * DONUT_CIRC;
+                    const dashoffset = -(arc.startPct / 100) * DONUT_CIRC;
+                    return (
+                      <circle
+                        key={arc.key}
+                        cx={DONUT_SIZE / 2}
+                        cy={DONUT_SIZE / 2}
+                        r={DONUT_RADIUS}
+                        fill="none"
+                        stroke={arc.color}
+                        strokeWidth={DONUT_STROKE}
+                        strokeDashoffset={dashoffset}
+                        strokeDasharray={donutAnimated ? `${arcLen} ${DONUT_CIRC - arcLen}` : `0 ${DONUT_CIRC}`}
+                        className={`donut-seg ${hoveredStatus === arc.key ? "is-hovered" : ""}`}
+                        style={{
+                          transformOrigin: `${DONUT_SIZE / 2}px ${DONUT_SIZE / 2}px`,
+                          transition: `stroke-dasharray .9s var(--ease) ${i * 0.06}s, transform .2s ease, filter .2s ease`,
+                        }}
+                        onMouseEnter={() => setHoveredStatus(arc.key)}
+                        onMouseLeave={() => setHoveredStatus(null)}
+                      />
+                    );
+                  })}
+                </g>
+              </svg>
               <div className="donut-center">
-                <span className="n num">{total}</span>
-                <span className="l">건</span>
+                <div className={`donut-center-face ${hoveredStatus ? "" : "is-visible"}`}>
+                  <span className="n num">{total}</span>
+                  <span className="l">건</span>
+                </div>
+                {donutArcs.map((arc) => (
+                  <div key={arc.key} className={`donut-center-face ${hoveredStatus === arc.key ? "is-visible" : ""}`}>
+                    <span className="n num">{arc.count}</span>
+                    <span className="l">{arc.label}</span>
+                  </div>
+                ))}
               </div>
             </div>
             <div className="legend">
-              {donutLegend.map((l) => (
-                <div className="legend-row" key={l.label}>
+              {donutLegend.map((l, i) => (
+                <div className="legend-row" key={l.label} style={{ animationDelay: `${i * 0.08}s` }}>
                   <span className="legend-dot" style={l.dotStyle} />
                   <span className="legend-label">{l.label}</span>
                   <span className="legend-value num">

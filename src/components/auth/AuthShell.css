@@ -1,0 +1,141 @@
+/* 로그인/회원가입 공통 레이아웃 — 좌(폼)/우(카피+WebGL 메쉬 셰이더 배경) 분할.
+   .cs-app-shell(로그인 이후 앱 화면)과 무관한 독립 스코프라, 필요한 토큰만
+   여기서 자체적으로 정의한다(값은 다른 캔버스들과 동일한 CleanStand 팔레트).
+
+   좌측(폼) 쪽의 마크업/클래스 패턴(GlassInputWrapper, 타이포 크기, animate-element
+   순차 등장 애니메이션 등)은 참고로 받은 sign-in.tsx 레퍼런스 컴포넌트의 Tailwind
+   유틸리티 조합을 이 프로젝트 컨벤션(자체 CSS 파일 + --brand 등 커스텀 프로퍼티)으로
+   그대로 옮긴 것 — 이 프로젝트엔 shadcn 스타일 --primary/--border 같은 Tailwind
+   테마 토큰이 없어서, 같은 시각 결과값을 우리 토큰으로 재현했다(tw-animate-css/
+   lucide-react 등 새 패키지는 설치하지 않음, 순수 CSS @keyframes만 사용). */
+.auth-shell {
+  --brand: #2563EB; --brand-hover: #1D4ED8; --brand-subtle: #EFF6FF;
+  --text: #17191C; --text-secondary: #5F6368; --text-muted: #8A9099;
+  --border: #E5E7EB; --surface: #FFFFFF; --error: #DC2626; --error-subtle: #FEF2F2;
+  --ease: cubic-bezier(0.25, 1, 0.5, 1);
+
+  min-height: 100vh;
+  display: flex;
+  background: var(--surface);
+  color: var(--text);
+  font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.auth-shell *, .auth-shell *::before, .auth-shell *::after { box-sizing: border-box; }
+
+/* ---------- 좌측: 폼 ---------- */
+.auth-left { flex: 1; display: flex; align-items: center; justify-content: center; padding: 48px 32px; }
+/* max-w-md(28rem=448px) + gap-6(24px) */
+.auth-left-inner { width: 100%; max-width: 448px; display: flex; flex-direction: column; gap: 24px; }
+
+/* text-4xl(36px)/md:text-5xl(48px) font-semibold(600) leading-tight(1.25) */
+.auth-title { font-size: 36px; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; margin: 0; color: var(--text); }
+@media (min-width: 768px) { .auth-title { font-size: 48px; } }
+.auth-subtitle { margin: 0; font-size: 15px; color: var(--text-secondary); }
+
+/* 회원가입 완료 안내(이메일 확인) 화면 전용 — 폼 없이 아이콘+문구만 있는 단순
+   레이아웃이라도, 인풋과 같은 glass 톤을 이어가려고 이메일 표시엔
+   .glass-input-wrapper를 그대로 재사용한다(안쪽 텍스트만 이 클래스로 중앙정렬). */
+.auth-icon-circle {
+  width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+  background: var(--brand-subtle); color: var(--brand);
+  display: flex; align-items: center; justify-content: center;
+}
+.auth-email-chip { margin: 0; padding: 14px 16px; text-align: center; font-size: 14px; font-weight: 600; color: var(--text); }
+
+/* space-y-5 = 20px */
+.auth-form { display: flex; flex-direction: column; gap: 20px; }
+.auth-field { display: flex; flex-direction: column; gap: 8px; }
+.auth-label { font-size: 14px; font-weight: 500; color: var(--text-secondary); }
+
+/* GlassInputWrapper — 테두리 연하게, 배경은 아주 옅은 틴트 + backdrop-blur, 포커스 시
+   테두리/배경만 브랜드블루로 살짝 진해짐(레퍼런스의 focus-within:border-violet-400/70
+   focus-within:bg-violet-500/10을 그대로 브랜드블루로 치환). */
+.glass-input-wrapper {
+  border-radius: 16px; border: 1px solid var(--border);
+  background: rgba(23, 25, 28, 0.05); backdrop-filter: blur(4px);
+  transition: border-color .15s var(--ease), background-color .15s var(--ease);
+}
+.glass-input-wrapper:focus-within { border-color: rgba(37, 99, 235, .7); background: rgba(37, 99, 235, .1); }
+.glass-input-wrapper .auth-input {
+  width: 100%; background: transparent; border: none; outline: none;
+  font-size: 14px; padding: 16px; border-radius: 16px; color: var(--text); font-family: inherit;
+}
+.auth-hint { font-size: 12px; color: var(--text-muted); }
+
+.password-field { position: relative; }
+.password-field .auth-input { padding-right: 48px; }
+.password-toggle {
+  position: absolute; top: 0; bottom: 0; right: 12px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 0;
+  transition: color .15s var(--ease);
+}
+.password-toggle:hover { color: var(--text); }
+
+.auth-error { margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--error-subtle);
+  color: var(--error); font-size: 13px; }
+
+/* rounded-2xl(16px) py-4(16px) font-medium(500), bg-primary -> --brand */
+.auth-submit {
+  width: 100%; height: auto; padding: 16px; border-radius: 16px; border: none;
+  background: var(--brand); color: #fff; font-size: 14px; font-weight: 500;
+  cursor: pointer; font-family: inherit; transition: background-color .15s var(--ease);
+}
+.auth-submit:hover { background: var(--brand-hover); }
+.auth-submit:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
+
+.auth-footer { text-align: center; font-size: 14px; color: var(--text-secondary); margin: 0; }
+.auth-footer a { color: var(--brand); font-weight: 500; }
+.auth-footer a:hover { text-decoration: underline; }
+
+/* ---------- 순차 등장 애니메이션 ----------
+   레퍼런스가 쓴 tw-animate-css의 animate-element/animate-delay-N을 새 패키지
+   설치 없이 순수 CSS @keyframes로 재현. 각 요소는 살짝 아래+블러된 상태로
+   시작해서 delay만큼 늦게 제자리로 떠오른다. */
+.animate-element { opacity: 0; filter: blur(6px); transform: translateY(16px); animation: fadeSlideIn .6s var(--ease) forwards; }
+.animate-delay-100 { animation-delay: .1s; }
+.animate-delay-200 { animation-delay: .2s; }
+.animate-delay-300 { animation-delay: .3s; }
+.animate-delay-400 { animation-delay: .4s; }
+.animate-delay-500 { animation-delay: .5s; }
+.animate-delay-600 { animation-delay: .6s; }
+.animate-delay-700 { animation-delay: .7s; }
+
+@keyframes fadeSlideIn {
+  to { opacity: 1; filter: blur(0px); transform: translateY(0px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-element { animation: none; opacity: 1; filter: none; transform: none; }
+}
+
+/* ---------- 우측: WebGL 메쉬 셰이더 배경 + 카피 ---------- */
+/* 바깥(.auth-right)은 그냥 flex 자리만 차지하고, 실제 카드(여백 16px + 모서리
+   24px + 캔버스 클리핑)는 안쪽 절대배치 래퍼가 담당 — border-radius로 자식을
+   자르려면 overflow:hidden이 "둥근 모서리를 가진 그 요소" 자신에 있어야 한다.
+   ShaderBackground는 이 래퍼가 이미 position:absolute라 별도 relative 없이도
+   그 자체가 containing block이 돼서, absolute inset-0로 바로 깔린다. */
+.auth-right { position: relative; flex: 1; }
+.auth-right-inner {
+  position: absolute; inset: 16px; border-radius: 24px; overflow: hidden;
+  background: #1E3A5F; /* WebGL 로드 전/실패 시 폴백 — 브랜드블루 팔레트의 다크 네이비 */
+  display: flex; align-items: flex-start; justify-content: flex-start;
+}
+
+/* 좌측 상단에 붙되 모서리에 딱 붙지 않도록 여백을 둔다. */
+.auth-right-copy { position: relative; z-index: 1; max-width: 420px; padding: 40px 0 0 40px; }
+.auth-right-copy h2 {
+  margin: 0; font-size: clamp(28px, 3.2vw, 40px); font-weight: 800; line-height: 1.35;
+  letter-spacing: -0.02em; color: #FFFFFF;
+  /* 셰이더 배경에 밝은 톤이 섞여도 대비가 약해지지 않도록 은은한 다크 그림자로 보강. */
+  text-shadow: 0 2px 16px rgba(15, 23, 42, .35), 0 1px 4px rgba(15, 23, 42, .25);
+}
+
+/* 좁은 화면 — 우측(카피+셰이더 배경)은 완전히 숨기고 좌측 폼만 전체 폭으로.
+   ShaderBackground 내부 IntersectionObserver가 display:none인 캔버스를
+   "화면 밖"으로 보고 rAF 루프를 스스로 멈추므로, 모바일에서 GPU/배터리를
+   불필요하게 쓰지 않는다(추가 처리 필요 없음). */
+@media (max-width: 860px) {
+  .auth-right { display: none; }
+  .auth-left { padding: 32px 20px; }
+}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { deleteEmployee } from "@/app/actions/employees";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export interface EmployeeRow {
   id: string;
@@ -16,11 +17,11 @@ export interface EmployeeRow {
 const PAGE_SIZE = 5;
 
 /**
- * 직원 목록 — 캔버스의 검색/페이지네이션/인라인 삭제확인 로직을 그대로 이식했다
- * (대시보드 캔버스 포팅 때 쓴 것과 동일한 패턴: 서버가 회사 전체 직원을 한 번에
- * 내려주고, 검색/페이지는 여기서 클라이언트 사이드로 처리). 삭제 자체는 실제
- * deleteEmployee 서버 액션을 그대로 호출한다 — 기존 confirm() 다이얼로그 대신
- * 캔버스처럼 행 안에서 "정말 삭제할까요? 예/아니오"로 확인한다.
+ * 직원 목록 — 캔버스의 검색/페이지네이션 로직을 그대로 이식했다(대시보드 캔버스
+ * 포팅 때 쓴 것과 동일한 패턴: 서버가 회사 전체 직원을 한 번에 내려주고, 검색/페이지는
+ * 여기서 클라이언트 사이드로 처리). 삭제 자체는 실제 deleteEmployee 서버 액션을
+ * 그대로 호출한다 — 브라우저 기본 confirm() 대신 공통 ConfirmDialog로 확인한다
+ * (액션 로직 자체는 손대지 않음, 확인 UI만 교체).
  */
 export function EmployeeListContent({ employees }: { employees: EmployeeRow[] }) {
   const [search, setSearch] = useState("");
@@ -46,6 +47,8 @@ export function EmployeeListContent({ employees }: { employees: EmployeeRow[] })
     });
     setConfirmingId(null);
   }
+
+  const confirmingEmployee = employees.find((e) => e.id === confirmingId) ?? null;
 
   return (
     <div className="card">
@@ -89,24 +92,10 @@ export function EmployeeListContent({ employees }: { employees: EmployeeRow[] })
                   </td>
                   <td className="muted-cell">{e.joinedDate}</td>
                   <td className="actions">
-                    {confirmingId === e.id ? (
-                      <>
-                        <span className="confirm-text">정말 삭제할까요?</span>
-                        <button type="button" className="btn-text" onClick={() => confirmDelete(e.id)}>
-                          예
-                        </button>
-                        <button type="button" className="btn-text muted" onClick={() => setConfirmingId(null)}>
-                          아니오
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <Link href={`/settings/employees/${e.id}`}>수정</Link>
-                        <button type="button" className="del" onClick={() => setConfirmingId(e.id)}>
-                          삭제
-                        </button>
-                      </>
-                    )}
+                    <Link href={`/settings/employees/${e.id}`}>수정</Link>
+                    <button type="button" className="del" onClick={() => setConfirmingId(e.id)}>
+                      삭제
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -147,6 +136,16 @@ export function EmployeeListContent({ employees }: { employees: EmployeeRow[] })
       ) : (
         <p className="empty-hint">{searchTerm ? "검색 결과가 없습니다." : "등록된 직원이 없습니다."}</p>
       )}
+
+      <ConfirmDialog
+        open={!!confirmingEmployee}
+        title="직원 삭제"
+        description={confirmingEmployee ? `"${confirmingEmployee.name}" 직원을 정말 삭제할까요?` : ""}
+        confirmLabel="삭제"
+        danger
+        onConfirm={() => confirmingId && confirmDelete(confirmingId)}
+        onCancel={() => setConfirmingId(null)}
+      />
     </div>
   );
 }

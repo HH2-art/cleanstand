@@ -1,4 +1,7 @@
 import { notFound } from "next/navigation";
+import "@/styles/app-shell.css";
+import "../expenses.css";
+import { AppSidebar } from "@/components/layout/AppSidebar";
 import { updateExpenseItem } from "@/app/actions/expenses";
 import { requireCurrentCompany } from "@/lib/company";
 import { createClient } from "@/lib/supabase/server";
@@ -19,9 +22,19 @@ export default async function EditExpenseItemPage({ params }: { params: Promise<
   if (!item) notFound();
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-4 py-12">
-      <h1 className="text-2xl font-bold">경비 항목 수정</h1>
-      <ExpenseForm action={updateExpenseItem} defaultValues={item} submitLabel="저장" />
-    </main>
+    <div className="cs-app-shell shell">
+      <AppSidebar current="expenses" companyName={company.name} logoUrl={company.logo_url} />
+      <div className="main">
+        <div className="expenses-page" style={{ maxWidth: 480, margin: "0 auto", padding: "24px 32px" }}>
+          <div className="page-head">
+            <h1>경비 항목 수정</h1>
+            <p>{company.name}</p>
+          </div>
+          <div className="card" style={{ marginTop: 16 }}>
+            <ExpenseForm action={updateExpenseItem} defaultValues={item} submitLabel="저장" layout="edit" />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

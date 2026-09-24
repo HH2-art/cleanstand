@@ -104,7 +104,7 @@ export default async function ProductivityPage() {
 
   return (
     <div className="cs-app-shell shell">
-      <AppSidebar current="productivity" companyName={company.name} />
+      <AppSidebar current="productivity" companyName={company.name} logoUrl={company.logo_url} />
       <div className="main">
         <div className="productivity-page productivity-container">
           <div className="page-head">

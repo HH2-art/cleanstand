@@ -9,7 +9,7 @@ export default async function CompanySettingsPage() {
 
   return (
     <div className="cs-app-shell shell">
-      <AppSidebar current="company" companyName={company?.name ?? "회사 미등록"} />
+      <AppSidebar current="company" companyName={company?.name ?? "회사 미등록"} logoUrl={company?.logo_url} />
       <div className="main">
         <CompanyForm company={company} />
       </div>

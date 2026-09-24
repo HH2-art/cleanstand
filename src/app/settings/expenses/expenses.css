@@ -1,0 +1,108 @@
+/* Expenses page styles — no design canvas exists for this screen (reference
+   screenshot only), so this reuses the same tokens/patterns already
+   established for the other ported pages: src/styles/app-shell.css +
+   the .card/.badge/.btn conventions from employees.css/productivity.css.
+   Scoped under .expenses-page for the same cross-page-collision reason as
+   the other pages' CSS; .expenses-container carries this page's own
+   main-inner box model (the [id] edit page reuses only the scope marker,
+   not the container, same split used by employees/[id]). */
+
+.expenses-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.expenses-page .page-head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.expenses-page .page-head h1 { font-size: 22px; }
+.expenses-page .page-head p { margin-top: 4px; font-size: 13px; color: var(--text-secondary); }
+
+.expenses-page .info-banner { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: 10px;
+  background: var(--brand-subtle); color: var(--brand-active); font-size: 12.5px; line-height: 1.5; }
+.expenses-page .info-banner svg { flex-shrink: 0; margin-top: 1px; }
+
+.expenses-page .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; }
+
+.expenses-page .list-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 4px; }
+.expenses-page .list-head-title { display: flex; flex-direction: column; gap: 2px; }
+.expenses-page .list-head-title h2 { font-size: 16px; }
+.expenses-page .list-head-title p { font-size: 12.5px; color: var(--text-muted); }
+.expenses-page .list-filters { display: flex; align-items: center; gap: 8px; }
+.expenses-page .search-input { height: 34px; width: 220px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--border);
+  background: var(--surface); font-size: 12.5px; color: var(--text); }
+.expenses-page .search-input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(37,99,235,.12); outline: none; }
+.expenses-page .filter-select { height: 34px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--border);
+  background: var(--surface); font-size: 12.5px; color: var(--text); cursor: pointer; }
+.expenses-page .filter-select:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(37,99,235,.12); outline: none; }
+
+.expenses-page table.exp-table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+.expenses-page table.exp-table th { text-align: left; font-size: 12px; font-weight: 500; color: var(--text-secondary);
+  background: var(--bg); height: 36px; padding: 0 12px; border-bottom: 1px solid var(--border); }
+.expenses-page table.exp-table th.num { text-align: right; }
+.expenses-page table.exp-table td { height: 52px; padding: 0 12px; border-bottom: 1px solid var(--border-subtle); font-size: 13px; color: var(--text); }
+.expenses-page table.exp-table td.num { text-align: right; }
+.expenses-page table.exp-table tr.inactive td { color: var(--text-muted); }
+.expenses-page table.exp-table td.muted-cell { color: var(--text-muted); }
+.expenses-page table.exp-table td.actions { text-align: right; white-space: nowrap; }
+.expenses-page table.exp-table td.actions a, .expenses-page table.exp-table td.actions button { font-size: 12px; }
+.expenses-page table.exp-table td.actions form { display: inline; }
+
+.expenses-page .wt-row { display: flex; align-items: center; gap: 10px; }
+.expenses-page .wt-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--brand-subtle); color: var(--brand);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.expenses-page .wt-name { font-size: 13.5px; font-weight: 500; color: var(--text); }
+
+/* 사용여부 토글 — 직원관리 캔버스의 자동/수동 토글과 동일한 구조/스타일 */
+.expenses-page .status-toggle { position: relative; width: 38px; height: 21px; flex-shrink: 0; cursor: pointer; display: inline-block; }
+.expenses-page .status-toggle input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.expenses-page .status-toggle .track { position: absolute; inset: 0; background: var(--border-strong); border-radius: 999px; pointer-events: none; transition: background .15s var(--ease); }
+.expenses-page .status-toggle .thumb { position: absolute; top: 2px; left: 2px; width: 17px; height: 17px; border-radius: 50%; background: #fff;
+  box-shadow: var(--shadow-sm); pointer-events: none; transition: transform .15s var(--ease); }
+.expenses-page .status-toggle input:checked ~ .track { background: var(--brand); }
+.expenses-page .status-toggle input:checked ~ .thumb { transform: translateX(17px); }
+
+.expenses-page .btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; border-radius: 8px;
+  font-size: 13px; font-weight: 500; border: 1px solid transparent; cursor: pointer; }
+.expenses-page .btn-primary { background: var(--brand); color: #fff; }
+.expenses-page .btn-primary:hover { background: var(--brand-hover); }
+.expenses-page .btn-primary:disabled { background: var(--border-strong); cursor: not-allowed; }
+.expenses-page .btn-text { background: none; border: none; padding: 0; font-size: 12.5px; font-weight: 500; color: var(--brand); cursor: pointer; }
+.expenses-page .btn-text:hover { text-decoration: underline; }
+.expenses-page .btn-text.danger { color: var(--error); }
+
+/* .field — ExpenseForm이 추가(.add-form, 가로 flex-wrap 행)와 수정([id], 세로 카드)
+   두 컨텍스트에 모두 쓰이므로, 필드 자체는 항상 세로형(label 위/입력 아래)으로 두고
+   가로/세로 배치는 부모(.add-form 대 일반 블록)가 결정한다. */
+.expenses-page .field { display: flex; flex-direction: column; gap: 5px; }
+.expenses-page .field label { font-size: 12.5px; font-weight: 500; color: var(--text); }
+.expenses-page .field input[type="text"], .expenses-page .field input[type="number"], .expenses-page .field select {
+  height: 36px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface); font-size: 13px; width: 100%;
+}
+.expenses-page .field input:focus, .expenses-page .field select:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+
+.expenses-page .add-form { margin-top: 12px; padding: 16px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface-subtle); display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.expenses-page .add-form .field { width: 160px; }
+.expenses-page .add-form .field.grow { flex: 1; min-width: 160px; }
+
+.expenses-page details > summary { list-style: none; cursor: pointer; }
+.expenses-page details > summary::-webkit-details-marker { display: none; }
+
+.expenses-page .pagination { display: flex; align-items: center; gap: 6px; margin-top: 14px; }
+.expenses-page .page-summary { font-size: 12px; color: var(--text-muted); margin-right: auto; }
+.expenses-page .page-btn { height: 26px; min-width: 26px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface); font-size: 12px; font-weight: 500; color: var(--text-secondary); cursor: pointer; }
+.expenses-page .page-btn:hover { background: var(--surface-hover); }
+.expenses-page .page-btn:disabled { opacity: .4; cursor: not-allowed; }
+.expenses-page .page-btn.active { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+
+.expenses-page .empty-hint { font-size: 13px; color: var(--text-muted); padding: 20px 0; text-align: center; }
+
+/* 개별 항목 수정 페이지([id]) — .expenses-page는 스코프 마커일 뿐 자기 박스모델 규칙이
+   없다(직원관리 [id] 페이지와 동일한 이유): 이 페이지는 .expenses-container 대신
+   자체 max-width 카드를 쓴다. 필드 자체는 위 .field를 그대로 재사용한다. */
+.expenses-page .edit-form { display: flex; flex-direction: column; gap: 14px; }
+.expenses-page .form-error { margin-top: 4px; font-size: 12.5px; color: var(--error); }

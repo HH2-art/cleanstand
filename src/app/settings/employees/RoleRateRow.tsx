@@ -9,6 +9,7 @@ import {
   type RenameRoleRateState,
   type RoleRateActionState,
 } from "@/app/actions/roleRates";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 /**
  * 역할별 표준원가 한 행 — 토글/인라인 수정/삭제 UI만 캔버스 디자인으로 입혔고,
@@ -67,29 +68,23 @@ export function RoleRateRow({
   const showDeleteWarning = !!deleteState && "error" in deleteState && !deleteDismissed;
   const isConfirmingMerge = !!renameState && "needsConfirm" in renameState && !mergeCancelled;
 
+  function confirmMerge() {
+    if (!renameState || !("needsConfirm" in renameState)) return;
+    const fd = new FormData();
+    fd.set("old_role_name", roleName);
+    fd.set("new_role_name", renameState.newName);
+    fd.set("confirm_merge", "true");
+    renameAction(fd);
+  }
+
+  function cancelMerge() {
+    setMergeCancelled(true);
+    setIsEditing(false);
+  }
+
   return (
     <div className="rate-row">
-      {isConfirmingMerge && renameState && "needsConfirm" in renameState ? (
-        <form action={renameAction} className="rate-row-edit-form">
-          <input type="hidden" name="old_role_name" value={roleName} />
-          <input type="hidden" name="new_role_name" value={renameState.newName} />
-          <input type="hidden" name="confirm_merge" value="true" />
-          <span>{renameState.message}</span>
-          <button type="submit" className="btn-text">
-            합치기
-          </button>
-          <button
-            type="button"
-            className="btn-text muted"
-            onClick={() => {
-              setMergeCancelled(true);
-              setIsEditing(false);
-            }}
-          >
-            취소
-          </button>
-        </form>
-      ) : isEditing ? (
+      {isEditing ? (
         <form action={renameAction} className="rate-row-edit-form">
           <input type="hidden" name="old_role_name" value={roleName} />
           <input type="text" name="new_role_name" className="role-edit-input" defaultValue={roleName} autoFocus />
@@ -157,6 +152,15 @@ export function RoleRateRow({
           <span>{renameState.error}</span>
         </div>
       )}
+
+      <ConfirmDialog
+        open={isConfirmingMerge}
+        title="역할 병합"
+        description={renameState && "needsConfirm" in renameState ? renameState.message : ""}
+        confirmLabel="합치기"
+        onConfirm={confirmMerge}
+        onCancel={cancelMerge}
+      />
     </div>
   );
 }

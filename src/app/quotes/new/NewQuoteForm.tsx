@@ -5,7 +5,9 @@ import {
   createQuote,
   getQuoteForReuse,
   listPastQuotesByBuildingType,
+  updateQuote,
   type PastQuoteSummary,
+  type QuoteEditData,
   type QuoteFormPayload,
 } from "@/app/actions/quotes";
 import { calculateQuote, estimateHours, estimateWorkers, publicHourlyRate } from "@/lib/calc/quote";
@@ -63,31 +65,44 @@ function won(amount: number) {
   return `${Math.round(amount).toLocaleString()}원`;
 }
 
+/** editing.siteConditions(Record<string, unknown>)에서 null/undefined일 때만 기본값으로 폴백. */
+function siteConditionValue<T>(editing: QuoteEditData | undefined, key: string, fallback: T): T {
+  const v = editing?.siteConditions[key];
+  return v === null || v === undefined ? fallback : (v as T);
+}
+
 export function NewQuoteForm({
   company,
   roleRates,
   productivityRates,
   expenseItems,
   regulation,
+  editing,
 }: {
   company: { name: string; generalAdminRate: number; profitRate: number; vatRate: number };
   roleRates: RoleRate[];
   productivityRates: ProductivityRate[];
   expenseItems: ExpenseItem[];
   regulation: RegulationVersion | null;
+  /** 견적 수정 모드(/quotes/[id]/edit) — 있으면 이 값들로 폼을 미리 채우고, 제출 시
+   * createQuote 대신 updateQuote(editing.id, payload)를 호출한다. */
+  editing?: QuoteEditData;
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   // 현장정보
-  const [mode, setMode] = useState<"private" | "public">("private");
-  const [buildingName, setBuildingName] = useState("");
-  const [buildingType, setBuildingType] = useState(BUILDING_TYPES[0]);
+  const [mode, setMode] = useState<"private" | "public">(() => editing?.mode ?? "private");
+  const [buildingName, setBuildingName] = useState(() => editing?.buildingName ?? "");
+  const [buildingType, setBuildingType] = useState(() => editing?.buildingType || BUILDING_TYPES[0]);
   const [workType, setWorkType] = useState(productivityRates[0]?.work_type ?? "");
   // 작업유형 선택 시 프리필되지만, 현장마다 직접 조정할 수 있다(예전엔 고정값이었음).
-  const [sqmPerHour, setSqmPerHour] = useState<number>(() => productivityRates[0]?.sqmPerHour ?? 0);
-  const [areaSqm, setAreaSqm] = useState<number | "">("");
-  const [frequencyPerWeek, setFrequencyPerWeek] = useState<number | "">(5);
+  // 수정 모드에서는 quotes 테이블에 원래 작업유형이 저장돼 있지 않아(계산 결과 금액만
+  // 저장됨) 어떤 작업유형이었는지 알 수 없다 — 대신 저장된 estimated_hours에서 역산한
+  // 정확한 sqmPerHour로 시작해서, 작업유형을 그대로 둔 채 계산해도 같은 결과가 나오게 한다.
+  const [sqmPerHour, setSqmPerHour] = useState<number>(() => editing ? editing.sqmPerHour : (productivityRates[0]?.sqmPerHour ?? 0));
+  const [areaSqm, setAreaSqm] = useState<number | "">(() => editing?.areaSqm ?? "");
+  const [frequencyPerWeek, setFrequencyPerWeek] = useState<number | "">(() => editing?.frequencyPerWeek ?? 5);
   const [freqUnit, setFreqUnit] = useState<"week" | "month">("week");
 
   // 부가 작업 태그 — 참고용, 계산에는 반영되지 않는다(실제 작업유형 목록을 그대로 재사용하되
@@ -98,31 +113,48 @@ export function NewQuoteForm({
   const [customTagText, setCustomTagText] = useState("");
 
   // site_conditions — 계산엔 안 쓰이는 참고용 현장 맥락 정보
-  const [conditionsOpen, setConditionsOpen] = useState(false);
-  const [contaminationLevel, setContaminationLevel] = useState("보통");
-  const [restroomCount, setRestroomCount] = useState<number | "">("");
-  const [stairFloors, setStairFloors] = useState<number | "">("");
-  const [floorMaterial, setFloorMaterial] = useState("");
-  const [parking, setParking] = useState("");
-  const [furnitureDensity, setFurnitureDensity] = useState("보통");
-  const [notes, setNotes] = useState("");
+  const [conditionsOpen, setConditionsOpen] = useState(!!editing);
+  const [contaminationLevel, setContaminationLevel] = useState(() => siteConditionValue(editing, "contamination_level", "보통"));
+  const [restroomCount, setRestroomCount] = useState<number | "">(() => siteConditionValue(editing, "restroom_count", ""));
+  const [stairFloors, setStairFloors] = useState<number | "">(() => siteConditionValue(editing, "stair_floors", ""));
+  const [floorMaterial, setFloorMaterial] = useState(() => siteConditionValue(editing, "floor_material", ""));
+  const [parking, setParking] = useState(() => siteConditionValue(editing, "parking", ""));
+  const [furnitureDensity, setFurnitureDensity] = useState(() => siteConditionValue(editing, "furniture_density", "보통"));
+  const [notes, setNotes] = useState(() => siteConditionValue(editing, "notes", ""));
 
   // 역할별 인원 — 작업시간은 견적 전체에 하나, 역할별로 인원수만 다르게 직접 입력한다.
-  const [privateLaborRows, setPrivateLaborRows] = useState<PrivateLaborRow[]>(() =>
-    roleRates.length > 0
+  // 수정 모드에선 getQuoteForEdit이 이미 재사용한 getQuoteForReuse 결과(역할명+인원수)로
+  // 시작하고, 시급원가는 (기존 견적 생성 당시 값이 아니라) 현재 회사 표준 시급원가를
+  // 새로 붙인다 — "지난 견적 참고" 불러오기(handleReuse)와 완전히 같은 방식이다.
+  const [privateLaborRows, setPrivateLaborRows] = useState<PrivateLaborRow[]>(() => {
+    if (editing && editing.mode === "private" && editing.privateLaborLines.length > 0) {
+      return editing.privateLaborLines.map((line) => ({
+        id: nextRowId(),
+        roleName: line.roleName,
+        workerCount: line.workerCount,
+        hourlyRate: roleRates.find((r) => r.role_name === line.roleName)?.standard_hourly_rate ?? 0,
+      }));
+    }
+    return roleRates.length > 0
       ? [{ id: nextRowId(), roleName: roleRates[0].role_name, workerCount: 1, hourlyRate: roleRates[0].standard_hourly_rate }]
-      : [{ id: nextRowId(), roleName: "", workerCount: 1, hourlyRate: 0 }],
-  );
-  const [publicLaborRows, setPublicLaborRows] = useState<PublicLaborRow[]>([
-    { id: nextRowId(), laborRole: "simple", workerCount: 1 },
-  ]);
+      : [{ id: nextRowId(), roleName: "", workerCount: 1, hourlyRate: 0 }];
+  });
+  const [publicLaborRows, setPublicLaborRows] = useState<PublicLaborRow[]>(() => {
+    if (editing && editing.mode === "public" && editing.publicLaborLines.length > 0) {
+      return editing.publicLaborLines.map((line) => ({ id: nextRowId(), ...line }));
+    }
+    return [{ id: nextRowId(), laborRole: "simple", workerCount: 1 }];
+  });
 
-  const [legalCost, setLegalCost] = useState<number>(0);
+  const [legalCost, setLegalCost] = useState<number>(() => editing?.legalCost ?? 0);
+  // 경비 항목은 quote_line_items에 그 당시 이름·금액 스냅샷만 남고 expense_items ID로
+  // 저장되지 않아 원래 선택을 복원할 수 없다 — 수정 모드는 빈 선택으로 시작한다(아래
+  // 경비 섹션에 안내 문구 표시).
   const [selectedExpenseIds, setSelectedExpenseIds] = useState<Set<string>>(new Set());
 
-  const [generalAdminRate, setGeneralAdminRate] = useState(company.generalAdminRate);
-  const [profitRate, setProfitRate] = useState(company.profitRate);
-  const [vatRate, setVatRate] = useState(company.vatRate);
+  const [generalAdminRate, setGeneralAdminRate] = useState(() => editing?.generalAdminRate ?? company.generalAdminRate);
+  const [profitRate, setProfitRate] = useState(() => editing?.profitRate ?? company.profitRate);
+  const [vatRate, setVatRate] = useState(() => editing?.vatRate ?? company.vatRate);
 
   // 지난 견적 참고 — 같은 건물유형의 최근 견적을 새 견적의 출발점으로 불러올 수 있다.
   const [pastQuotes, setPastQuotes] = useState<PastQuoteSummary[]>([]);
@@ -305,7 +337,7 @@ export function NewQuoteForm({
     };
 
     startTransition(async () => {
-      const result = await createQuote(payload);
+      const result = editing ? await updateQuote(editing.id, payload) : await createQuote(payload);
       if (result && "error" in result) setError(result.error);
     });
   }
@@ -315,8 +347,8 @@ export function NewQuoteForm({
   return (
     <>
       <div className="topbar">
-        <h1>새 견적 만들기</h1>
-        <p>{company.name}</p>
+        <h1>{editing ? "견적 수정" : "새 견적 만들기"}</h1>
+        <p>{editing ? `${company.name} · ${editing.buildingName}` : company.name}</p>
       </div>
 
       <div className="page">
@@ -670,6 +702,11 @@ export function NewQuoteForm({
               <h2>현장경비</h2>
               <span className="step">4</span>
             </div>
+            {editing && (
+              <p style={{ marginBottom: 12, fontSize: 12.5, color: "var(--text-muted)" }}>
+                이 견적을 만들 때 선택했던 경비 항목은 자동으로 다시 선택되지 않습니다 — 필요한 항목을 다시 선택해주세요.
+              </p>
+            )}
             {expenseItems.length > 0 ? (
               <div className="expense-groups">
                 {CATEGORY_ORDER.map((cat) => {
@@ -858,12 +895,20 @@ export function NewQuoteForm({
                   </p>
                 )}
                 <div className="sidebar-actions">
-                  <button type="button" className="btn btn-secondary" onClick={handleSubmit} disabled={isPending}>
-                    임시저장
-                  </button>
-                  <button type="button" className="btn btn-primary" onClick={handleSubmit} disabled={isPending}>
-                    {isPending ? "저장 중..." : "견적서 생성"}
-                  </button>
+                  {editing ? (
+                    <button type="button" className="btn btn-primary" onClick={handleSubmit} disabled={isPending}>
+                      {isPending ? "저장 중..." : "수정 저장"}
+                    </button>
+                  ) : (
+                    <>
+                      <button type="button" className="btn btn-secondary" onClick={handleSubmit} disabled={isPending}>
+                        임시저장
+                      </button>
+                      <button type="button" className="btn btn-primary" onClick={handleSubmit} disabled={isPending}>
+                        {isPending ? "저장 중..." : "견적서 생성"}
+                      </button>
+                    </>
+                  )}
                 </div>
               </>
             ) : (

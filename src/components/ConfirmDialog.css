@@ -1,0 +1,55 @@
+/* ConfirmDialog — 공통 확인 모달. 여러 설정 페이지(.employees-page/.productivity-page/
+   .expenses-page 등)에서 재사용하므로 그 페이지들의 .btn 스타일에 기대지 않고
+   자체 스타일을 둔다 — 페이지마다 버튼 높이/반경이 조금씩 달라서, 독립적이어야만
+   "어디서 띄우든 같은 톤"을 보장할 수 있다. .cs-app-shell 스코프라 이 CSS 하나로
+   그 모든 설정 페이지에 공통 적용된다(각 페이지 CSS가 각자 .cs-app-shell 안에서
+   렌더링되므로). */
+.cs-app-shell .confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: confirm-fade-in 0.15s var(--ease);
+}
+@keyframes confirm-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.cs-app-shell .confirm-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  padding: 24px;
+  animation: confirm-pop-in 0.18s var(--ease);
+}
+@keyframes confirm-pop-in {
+  from { opacity: 0; transform: scale(0.96) translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.cs-app-shell .confirm-title { font-size: 16px; font-weight: 700; color: var(--text); margin: 0 0 8px; }
+.cs-app-shell .confirm-desc { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+.cs-app-shell .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
+
+.cs-app-shell .confirm-btn { height: 38px; padding: 0 18px; border-radius: 8px; font-size: 13.5px; font-weight: 600;
+  border: 1px solid transparent; cursor: pointer; transition: background-color 0.15s var(--ease), border-color 0.15s var(--ease); }
+.cs-app-shell .confirm-btn-cancel { background: var(--surface); border-color: var(--border); color: var(--text-secondary); }
+.cs-app-shell .confirm-btn-cancel:hover { background: var(--surface-hover); }
+.cs-app-shell .confirm-btn-primary { background: var(--brand); color: #fff; }
+.cs-app-shell .confirm-btn-primary:hover { background: var(--brand-hover); }
+.cs-app-shell .confirm-btn-danger { background: var(--error); color: #fff; }
+.cs-app-shell .confirm-btn-danger:hover { background: #B91C1C; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cs-app-shell .confirm-overlay,
+  .cs-app-shell .confirm-card { animation: none; }
+}

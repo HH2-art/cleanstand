@@ -66,7 +66,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="cs-app-shell shell">
-      <AppSidebar current="dashboard" companyName={company.name} />
+      <AppSidebar current="dashboard" companyName={company.name} logoUrl={company.logo_url} />
       <div className="main">
         <div className="main-inner dashboard-page">
           <DashboardContent

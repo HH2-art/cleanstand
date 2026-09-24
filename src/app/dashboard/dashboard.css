@@ -53,14 +53,19 @@
 .dashboard-page .empty-state p { font-size: 13.5px; color: var(--text-secondary); margin-bottom: 16px; }
 
 .dashboard-page .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
-.dashboard-page .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; box-shadow: var(--shadow-sm); }
-.dashboard-page .kpi-label { font-size: 11.5px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px; }
-.dashboard-page .kpi-value { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 3px; }
-.dashboard-page .kpi-delta { font-size: 11.5px; font-weight: 500; }
-.dashboard-page .kpi-delta.up { color: var(--success); }
-.dashboard-page .kpi-delta.down { color: var(--error); }
-.dashboard-page .kpi-delta.flat { color: var(--text-muted); }
-.dashboard-page .kpi-caption { font-size: 11.5px; color: var(--text-muted); }
+.dashboard-page .kpi-card { background: var(--surface-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; box-shadow: var(--shadow-sm); }
+.dashboard-page .kpi-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+/* 라벨 대비 강화 — 기존 var(--text-secondary)/weight 600도 절대값으로는 낮지 않지만,
+   28px/weight 800인 .kpi-value 옆에 12px로 있으면 상대적으로 흐려 보인다(실제
+   스크린샷으로 확인). text-gray-700 정도로 한 단계 더 진하게, weight도 한 단계
+   더 올린다 — 숫자(.kpi-value)·비교문구(.kpi-pill/.kpi-caption)는 그대로 둔다. */
+.dashboard-page .kpi-label { font-size: 12px; font-weight: 700; color: #374151; }
+.dashboard-page .kpi-pill { display: inline-flex; align-items: center; gap: 2px; height: 22px; padding: 0 9px; border-radius: 9999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.dashboard-page .kpi-pill.up { background: var(--success-subtle); color: var(--success); }
+.dashboard-page .kpi-pill.down { background: var(--error-subtle); color: var(--error); }
+.dashboard-page .kpi-pill.flat { background: var(--surface); color: var(--text-muted); }
+.dashboard-page .kpi-value { font-size: 28px; font-weight: 800; letter-spacing: -0.01em; margin-bottom: 4px; }
+.dashboard-page .kpi-caption { font-size: 12px; color: var(--text-muted); }
 
 .dashboard-page .section-title { font-size: 14px; font-weight: 600; margin: 0 0 8px; }
 .dashboard-page .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 14px; }
@@ -79,15 +84,31 @@
 
 .dashboard-page .chart-divider { height: 1px; background: var(--border-subtle); margin: 14px 0; }
 .dashboard-page .donut-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-.dashboard-page .donut { width: 108px; height: 108px; border-radius: 50%; flex-shrink: 0; position: relative; }
-.dashboard-page .donut-center { position: absolute; inset: 13px; background: var(--surface); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.dashboard-page .donut-center .n { font-size: 17px; font-weight: 700; }
-.dashboard-page .donut-center .l { font-size: 10px; color: var(--text-muted); }
+.dashboard-page .donut { width: 108px; height: 108px; flex-shrink: 0; position: relative; }
+.dashboard-page .donut-svg { overflow: visible; }
+.dashboard-page .donut-seg { cursor: pointer; }
+.dashboard-page .donut-seg.is-hovered { transform: scale(1.03); filter: drop-shadow(0 3px 8px rgba(0,0,0,.22)); }
+.dashboard-page .donut-center { position: absolute; inset: 13px; background: var(--surface); border-radius: 50%; }
+.dashboard-page .donut-center-face { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .25s var(--ease); }
+.dashboard-page .donut-center-face.is-visible { opacity: 1; }
+.dashboard-page .donut-center-face .n { font-size: 17px; font-weight: 700; }
+.dashboard-page .donut-center-face .l { font-size: 10px; color: var(--text-muted); }
 .dashboard-page .legend { display: flex; flex-direction: column; gap: 7px; flex: 1 1 140px; min-width: 140px; }
-.dashboard-page .legend-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.dashboard-page .legend-row { display: flex; align-items: center; gap: 8px; font-size: 12px;
+  opacity: 0; animation: dashboard-legend-in .4s var(--ease) both; }
 .dashboard-page .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .dashboard-page .legend-label { color: var(--text-secondary); flex: 1; }
 .dashboard-page .legend-value { font-weight: 600; }
+
+@keyframes dashboard-legend-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-page .legend-row { animation: none; opacity: 1; }
+  .dashboard-page .donut-seg { transition: none !important; }
+}
 
 .dashboard-page .bars { display: flex; flex-direction: column; gap: 9px; }
 .dashboard-page .bar-head { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }

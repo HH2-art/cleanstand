@@ -1,0 +1,403 @@
+/* Marketing homepage — no design canvas exists for this screen (reference
+   screenshot for layout only), so this is authored fresh using the same
+   brand tokens as the rest of the app (src/styles/app-shell.css, .cs-app-shell
+   scope: --brand #2563EB, Pretendard stack, etc.). Scoped under .home-page
+   for the same cross-page-collision reason as every other ported page. */
+
+/* overflow-x:hidden을 .home-page 같은 상위 요소에 두면 안 된다 — 어떤 조상이든
+   overflow가 visible이 아니면 그 후손의 position:sticky가 뷰포트가 아니라 그
+   조상 기준으로 스크롤 컨테이너를 잡아버려서, 헤더(.home-nav)의 sticky가 무력화된다.
+   가로 스크롤 방지가 필요하면 문제되는 개별 섹션에만 overflow-x:auto를 준다
+   (recent-table-wrap이 이미 그렇게 하고 있다). */
+.home-page { background: #fff; }
+
+/* ---------- scroll reveal ---------- */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s var(--ease), transform .6s var(--ease); }
+.reveal.is-visible { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal { transition: none; opacity: 1; transform: none; }
+}
+
+/* ---------- shared buttons ---------- */
+.home-page .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 18px;
+  border-radius: 8px; font-size: 14px; font-weight: 600; border: 1px solid transparent; cursor: pointer; white-space: nowrap; transition: background .15s var(--ease), border-color .15s var(--ease), color .15s var(--ease), transform .1s var(--ease); }
+.home-page .btn:active { transform: translateY(1px); }
+.home-page .btn-primary { background: var(--brand); color: #fff; box-shadow: 0 1px 2px rgba(37,99,235,.25); }
+.home-page .btn-primary:hover { background: var(--brand-hover); box-shadow: 0 6px 16px rgba(37,99,235,.32); transform: translateY(-1px); }
+.home-page .btn-ghost { background: none; color: var(--text-secondary); }
+.home-page .btn-ghost:hover { color: var(--text); }
+.home-page .btn-outline { background: var(--surface); color: var(--text); border-color: var(--border); }
+.home-page .btn-outline:hover { background: var(--surface-hover); }
+.home-page .btn-lg { height: 50px; padding: 0 26px; font-size: 16px; }
+.home-page .btn-cta { height: 48px; padding: 0 24px; font-size: 15px; background: #fff; color: var(--brand); box-shadow: 0 4px 14px rgba(0,0,0,.15); }
+.home-page .btn-cta:hover { background: var(--brand-subtle); transform: translateY(-1px); }
+
+/* ---------- nav ---------- */
+.home-page .home-nav { position: sticky; top: 0; z-index: 40; background: transparent; border-bottom: 1px solid transparent;
+  transition: background .25s var(--ease), border-color .25s var(--ease), box-shadow .25s var(--ease); }
+.home-page .home-nav.is-scrolled { background: rgba(255,255,255,.85); backdrop-filter: blur(10px); border-bottom-color: var(--border); box-shadow: var(--shadow-sm); }
+.home-page .home-nav-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.home-page .home-logo { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.home-page .home-logo-mark { width: 30px; height: 30px; border-radius: 8px; background: var(--brand); color: #fff; font-size: 13px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center; letter-spacing: -.02em; }
+.home-page .home-logo-word { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -.01em; }
+.home-page .home-nav-links { display: flex; align-items: center; gap: 6px; flex: 1; justify-content: center; }
+.home-page .home-nav-links a { position: relative; isolation: isolate; display: inline-flex; align-items: center;
+  height: 34px; padding: 0 14px; border-radius: 9999px; font-size: 14px; font-weight: 500; color: var(--text-secondary);
+  transition: color .25s var(--ease); }
+.home-page .home-nav-links a::before {
+  content: ""; position: absolute; inset: -6px; border-radius: 9999px;
+  background: radial-gradient(circle, rgba(37,99,235,.22) 0%, rgba(37,99,235,.08) 55%, transparent 78%);
+  opacity: 0; transform: scale(.75); transition: opacity .35s var(--ease), transform .35s var(--ease);
+  pointer-events: none; z-index: -1;
+}
+.home-page .home-nav-links a:hover { color: var(--brand); }
+.home-page .home-nav-links a:hover::before { opacity: 1; transform: scale(1); }
+.home-page .home-nav-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.home-page .home-nav-actions .btn { position: relative; isolation: isolate; }
+.home-page .home-nav-actions .btn::before {
+  content: ""; position: absolute; inset: -12px; border-radius: 9999px;
+  background: radial-gradient(circle, rgba(37,99,235,.28) 0%, rgba(37,99,235,.1) 55%, transparent 78%);
+  opacity: 0; transform: scale(.75); transition: opacity .35s var(--ease), transform .35s var(--ease);
+  pointer-events: none; z-index: -1;
+}
+.home-page .home-nav-actions .btn:hover::before { opacity: 1; transform: scale(1); }
+
+/* 로그인 상태 네비의 "대시보드" 버튼 자리를 대체하는 회사 아바타 링크. 아바타 자체의
+   원형/이미지/이니셜 스타일은 AppSidebar.css의 .company-avatar(.cs-app-shell 스코프,
+   홈페이지 루트도 이 스코프를 물려받아 그대로 적용됨)를 그대로 쓰고, 여기서는 hover
+   시 테두리/그림자만 추가한다. */
+.home-page .home-nav-avatar-link { display: inline-flex; border-radius: 50%; }
+.home-page .home-nav-avatar-link:hover .company-avatar { border-color: var(--brand-border); box-shadow: var(--shadow-md); }
+
+/* ---------- hero ---------- */
+.home-page .home-hero { padding: 72px 24px 96px; }
+/* 왼쪽 카피 폭은 minmax(440px,560px)로 보호(기존 ~572px 수준에서 줄어들지 않게)하고,
+   프리뷰가 필요한 만큼(1fr) 나머지 공간을 전부 가져가게 해서 넓은 화면일수록 프리뷰가
+   커진다 — 대시보드 미니 프리뷰의 실제 배율은 ResizeObserver가 이 공간의 실측 폭을
+   보고 알아서 계산한다(위 "대시보드 미니 프리뷰" 섹션 참고).
+   반드시 minmax(0, 1fr)여야 한다 — 맨 1fr 트랙의 자동 최소 크기는 0이 아니라 콘텐츠의
+   min-content 크기(auto)라서, 안의 .dash-preview-natural이 가진 고정 width(1600px 등)가
+   overflow:hidden을 여러 겹 거쳐도 그대로 트랙 최소 크기로 새어 들어가 그리드 전체가
+   뷰포트 밖으로 밀려났었다(실측 결과 프리뷰 컬럼이 1440px 화면에서 1602px로 렌더링됨 —
+   .dash-preview-natural의 고정폭 1600px과 정확히 일치, 이게 원인이라는 증거). */
+.home-page .home-hero-inner { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: minmax(440px, 560px) minmax(0, 1fr); gap: 40px; align-items: center; }
+.home-page .home-eyebrow { display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border-radius: 9999px;
+  background: var(--brand-subtle); color: var(--brand); font-size: 12.5px; font-weight: 600; margin-bottom: 18px; }
+.home-page .home-hero h1 { font-size: 42px; line-height: 1.25; letter-spacing: -.02em; font-weight: 700; margin: 0 0 16px; }
+.home-page .home-hero-sub { font-size: 16px; color: var(--text-secondary); line-height: 1.6; max-width: 460px; margin: 0 0 22px; }
+.home-page .home-checklist { list-style: none; margin: 0 0 32px; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.home-page .home-checklist li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text); }
+.home-page .check-chip { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 9999px;
+  background: var(--success-subtle); color: var(--success); flex-shrink: 0; }
+.home-page .home-hero-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+/* ---------- 대시보드 미니 프리뷰 (히어로 전용) ----------
+   사이드바 포함 실제 대시보드 화면 전체(AppSidebar + DashboardContent, dashboard.css를
+   이 페이지에 그대로 import)를 고정 크기 캔버스 안에 원본 그대로 그린 뒤 transform:scale로
+   축소한다. 브라우저 크롬(점 3개+주소창)은 제거 — 카드 자체(둥근 모서리+그림자)만으로
+   "떠있는 화면"처럼 보이게 한다. 안쪽은 전부 실제 컴포넌트 — 이 파일에서 kpi-card/
+   donut/사이드바 등의 스타일을 새로 정의하거나 손대지 않는다.
+
+   .dash-preview-frame에 overflow:hidden + max-width(Interactive.tsx의 MAX_FRAME_WIDTH와
+   동일한 820px)를 반드시 걸어서, scale이 얼마로 계산되든 컨테이너 박스 자체는 그 경계를
+   절대 넘지 않는다. width/height/transform 값 자체는 CSS가 아니라 Interactive.tsx의
+   DashboardPreview가 ResizeObserver로 "실제 렌더 폭"을 재서 인라인 스타일로 계산해 넣는다
+   (이전에 grid-template-columns를 `1fr`로 썼다가, 자식의 고정 width(1600px)가
+   overflow:hidden을 거쳐도 그대로 트랙 최소폭으로 새어 들어가 히어로 우측 컬럼이
+   1440px 화면에서 1602px까지 밀려나는 버그가 있었다 — `minmax(0, 1fr)`로 고쳐서
+   grid 트랙 자체가 콘텐츠 크기와 무관하게 항상 줄어들 수 있게 했다). */
+.home-page .home-hero-preview { display: flex; }
+.home-page .dash-preview-frame { flex: 1; width: 100%; max-width: 820px; border-radius: 16px; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-lg);
+  transition: opacity .35s var(--ease), transform .35s var(--ease); }
+
+.home-page .dash-preview-viewport { width: 100%; overflow: hidden; background: var(--bg); }
+.home-page .dash-preview-natural {
+  transform-origin: top left;
+  display: flex;
+  overflow: hidden;
+  pointer-events: none; /* 클릭해도 실제 라우팅/로그아웃이 절대 일어나면 안 된다 */
+  will-change: transform;
+}
+/* AppSidebar.css에는 실제 /dashboard 화면이 진짜 좁은 기기에서 보일 때를 위한
+   @media(max-width:860px) 반응형 규칙이 있다(사이드바가 세로→가로 바로 바뀜). 그
+   미디어쿼리는 "이 캔버스가 지금 1600px 논리 폭으로 그려지고 있다"를 모르고 실제
+   브라우저 뷰포트만 본다 — 그래서 실제 화면이 860px보다 좁아지면(모바일 등) 캔버스
+   내부의 사이드바가 제멋대로 가로 바 레이아웃으로 바뀌면서 레이아웃이 완전히
+   깨졌다(실측: 375px 뷰포트에서 재현 확인). 이 프리뷰 안에서는 항상 데스크톱 사이드바
+   모양을 유지해야 하므로, 실제 뷰포트 폭과 무관하게 강제로 되돌린다 — 좁은 화면에서는
+   isCompact 모드(사이드바 자체를 display:none)로 가리는 것으로 충분하다. */
+/* .sidebar는 이제 실제 /dashboard 화면에서 position:sticky + height:100vh로 뷰포트에
+   고정된다(로그아웃 버튼이 항상 보이게 하려는 목적) — 100vh는 이 스케일된 미니 캔버스
+   안에서도 "진짜 브라우저 뷰포트" 기준으로 계산되기 때문에(transform은 레이아웃에
+   영향을 안 줌), 그대로 두면 사이드바가 1060px 캔버스 높이가 아니라 실제 뷰포트
+   높이를 따라가 버려서 잘리거나 빈 공간이 생긴다. height:100%로 캔버스
+   (.dash-preview-natural, 실제 높이는 Interactive.tsx가 인라인 style로 지정)에 맞추고,
+   position은 static으로 되돌려 sticky가 실제 페이지 스크롤에 반응하지 않게 막는다. */
+.home-page .dash-preview-natural .sidebar {
+  width: 248px !important; flex-direction: column !important; align-items: stretch !important;
+  overflow-x: visible !important; padding: 20px 14px !important;
+  position: static !important; height: 100% !important;
+}
+.home-page .dash-preview-natural .sidebar-company { display: flex !important; }
+.home-page .dash-preview-natural .nav-divider,
+.home-page .dash-preview-natural .sidebar-bottom { display: block !important; }
+/* 모바일 축약 모드 — 실제 컴포넌트를 그대로 렌더링하되(다시 그리지 않음), 사이드바와
+   표/하단 카드를 가려서 스탯카드 3개만 남긴다. 화면이 좁아질수록 정보량을 억지로
+   욱여넣지 않기 위함. */
+.home-page .dash-preview-natural.is-compact .sidebar,
+.home-page .dash-preview-natural.is-compact .page-title,
+.home-page .dash-preview-natural.is-compact .table-card,
+.home-page .dash-preview-natural.is-compact .bottom-grid { display: none; }
+.home-page .dash-preview-natural.is-compact .main-inner { padding-top: 28px; }
+
+/* ---------- section shell ---------- */
+.home-page .home-section { padding: 112px 24px; }
+.home-page .home-section.alt { background: #F8FAFC; }
+.home-page .section-head { max-width: 640px; margin: 0 auto 48px; text-align: center; }
+.home-page .section-head h2 { font-size: 30px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 12px; }
+.home-page .section-head p { font-size: 15px; color: var(--text-secondary); line-height: 1.6; }
+
+/* ---------- benefit cards — 자동 가로 스크롤(marquee) ----------
+   카드 세트를 JSX에서 2번 렌더링(BENEFITS 6개 × 2 = 12개)해두고, translateX를 트랙
+   너비의 절반(= 카드 세트 1벌의 너비)만큼 이동시킨 뒤 0으로 순간 리셋한다. 두 세트가
+   완전히 동일하므로 리셋 순간이 시각적으로 티가 나지 않는다(이음새 없는 무한루프). */
+/* max-width+margin:auto로 다른 섹션들과 동일하게 가운데 정렬 — 이전엔 이 규칙이 없어서
+   .home-section의 padding(좌우 24px)만 걸린 채 뷰포트 전체 폭을 그대로 썼다(1920px+
+   화면에서 티커가 화면 끝까지 늘어나 보이는 원인). 티커 자체(.benefit-track)는 이
+   경계 안에서만 흐른다 — 무한 루프 자체는 그대로 유지된다. */
+.home-page .benefit-marquee { overflow: hidden; width: 100%; max-width: 1280px; margin: 0 auto;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent); }
+.home-page .benefit-track { display: flex; gap: 20px; width: max-content; animation: home-benefit-scroll 26s linear infinite; }
+.home-page .benefit-marquee:hover .benefit-track { animation-play-state: paused; }
+@keyframes home-benefit-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-page .benefit-track { animation: none; }
+}
+.home-page .benefit-card { flex: 0 0 260px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px;
+  box-shadow: var(--shadow-sm); transition: transform .2s var(--ease), box-shadow .2s var(--ease); }
+.home-page .benefit-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+.home-page .benefit-icon { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px;
+  background: var(--brand-subtle); color: var(--brand); margin-bottom: 16px; }
+.home-page .benefit-card h3 { font-size: 16px; font-weight: 600; margin: 0 0 8px; }
+.home-page .benefit-card p { font-size: 13.5px; color: var(--text-secondary); line-height: 1.55; margin: 0; }
+
+/* ---------- 더 빠르고, 더 정확하고, 더 깔끔하게 (3번 섹션) ----------
+   카드/아이콘 없이 타이포그래피만 쓰는 가로 리스트. 키워드:설명 = flex-basis
+   33%:나머지(약 1:2 비율). 구분선은 각 줄의 border-bottom으로 만들고 마지막 줄만
+   지운다 — "줄 사이"에만 생기게. */
+.home-page .promise-list { max-width: 900px; margin: 0 auto; }
+.home-page .promise-row { display: flex; align-items: baseline; gap: 40px; padding: 40px 0; border-bottom: 1px solid var(--border); }
+.home-page .promise-row:last-child { border-bottom: none; }
+.home-page .promise-keyword { flex: 0 0 33%; font-size: 26px; font-weight: 700; color: var(--brand); letter-spacing: -.01em; white-space: nowrap; }
+.home-page .promise-desc { flex: 1 1 auto; font-size: 15.5px; color: var(--text-secondary); line-height: 1.6; }
+
+@media (max-width: 640px) {
+  .home-page .promise-row { flex-direction: column; align-items: flex-start; gap: 10px; padding: 28px 0; }
+  .home-page .promise-keyword { font-size: 22px; }
+}
+
+/* ---------- 어떻게 사용하나요? (4번 섹션 — 3단계 스텝 프리뷰) ----------
+   원 3개(.hiw-circle-col)와 라벨 3개(.hiw-label-col)는 각각 독립적인 3등분 그리드를
+   쓴다 — 같은 grid-template-columns(repeat(3,1fr))라 항상 같은 컬럼에 정렬되면서도,
+   라벨 컬럼이 원 크기(40px)에 눌리지 않고 1/3 폭을 온전히 쓴다(처음엔 원·선·원·선·원
+   5열 그리드에 라벨까지 욱여넣었다가 "회사 기준으로 설정" 같은 텍스트가 40px 폭
+   안에서 글자 단위로 줄바꿈되는 버그가 있어 분리했다 — 실제 스크린샷으로 확인).
+
+   연결선은 세그먼트 2개(1↔2, 2↔3)로 각각 따로 그린다 — 회색 바탕(.hiw-track-seg-bg)
+   위에 파란 진행 바(.hiw-track-seg-fill)를 얹고, Interactive.tsx가 activeStep이
+   바뀔 때마다 그 세그먼트의 transform을 scaleX(0)→scaleX(1)로 3초 linear
+   transition시킨다(진행 중인 세그먼트만 transition 적용, 이미 끝난 세그먼트는
+   transition 없이 바로 scaleX(1)로 고정, 아직 안 온 세그먼트는 scaleX(0)).
+   transform-origin:left라 항상 왼쪽부터 오른쪽으로 채워진다. */
+.home-page .hiw-wrap { max-width: 1120px; margin: 0 auto; }
+.home-page .hiw-progress { max-width: 840px; margin: 0 auto; }
+
+.home-page .hiw-track { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); align-items: center; height: 40px; }
+.home-page .hiw-track-seg-bg { position: absolute; top: 50%; width: 33.3333%; height: 3px;
+  background: var(--border); border-radius: 9999px; transform: translateY(-50%); }
+.home-page .hiw-track-seg-fill { position: absolute; top: 50%; width: 33.3333%; height: 3px; background: var(--brand);
+  border-radius: 9999px; transform-origin: left center; }
+.home-page .hiw-circle-col { display: flex; justify-content: center; position: relative; z-index: 1; }
+.home-page .hiw-circle { width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600;
+  background: var(--surface-subtle); color: var(--text-secondary);
+  transition: background .2s var(--ease), color .2s var(--ease), transform .15s var(--ease); }
+.home-page .hiw-circle:hover { transform: scale(1.06); }
+.home-page .hiw-circle.active { background: var(--brand); color: #fff; box-shadow: var(--shadow-sm); }
+
+.home-page .hiw-labels { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 14px; }
+.home-page .hiw-label-col { text-align: center; padding: 0 8px; }
+.home-page .hiw-step-label { font-size: 13.5px; font-weight: 500; color: var(--text-secondary); transition: color .2s var(--ease); }
+.home-page .hiw-step-label.active { font-weight: 700; color: var(--text); }
+.home-page .hiw-step-desc { margin-top: 4px; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+/* 단계 화면을 담는 연한 하늘색 배경 박스 — 세 단계 모두 높이/폭이 고정이다(요청
+   사항). 폭은 반응형(hiw-wrap 폭을 그대로 따름)이지만 높이는 HIW_PANEL_HEIGHT
+   (Interactive.tsx)로 고정 — .hiw-panel-viewport가 그 안에서 실제 쓸 수 있는 높이
+   (패딩 뺀 나머지)를 flex로 세로 중앙 정렬하고, 콘텐츠가 그보다 크면
+   Interactive.tsx가 실측(scrollHeight)해서 transform:scale로 줄인다(작으면 1로
+   그대로 — 세로 중앙 정렬만 적용). overflow:hidden은 스케일 전 레이아웃 박스가
+   transform과 무관하게 원래 크기를 차지하는 것을 가려주는 안전장치(DashboardPreview
+   에서 쓴 것과 같은 이유 — transform은 레이아웃엔 영향을 안 준다). */
+.home-page .hiw-panel { margin-top: 40px; height: var(--hiw-panel-height, 560px); background: #EFF6FF;
+  border: 1px solid var(--border); border-radius: 16px; padding: 40px; box-shadow: var(--shadow-sm); overflow: hidden; }
+.home-page .hiw-panel-viewport { height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.home-page .hiw-panel-content { width: 100%; transition: opacity .25s ease; opacity: 1; }
+.home-page .hiw-panel-content.is-fading { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .home-page .hiw-panel-content { transition: none; }
+}
+
+/* 2/3단계 미리보기는 원래 /quotes/new의 2컬럼 레이아웃(폼 1fr + 사이드바 380px) 중
+   한쪽만 떼어 쓰는 것이라, 그 폭을 여기서 새로 잡아준다 — 사이드바는 원래 폭(380px)
+   그대로 가운데 정렬. sidebar-wrap의 position:sticky도 이 박스 안에서는 의미가 없어
+   꺼둔다(실제 /quotes/new 페이지에는 영향 없음 — 이 규칙은 .hiw-panel 안에서만 적용). */
+.home-page .hiw-panel .quotes-new-page .sidebar-wrap { position: static; top: auto; max-width: 380px; margin: 0 auto; }
+
+/* pt-table(회사 커스텀 표)은 이 박스 폭보다 좁은 화면(모바일)에서 그대로 두면 셀이
+   짓눌려 글자 단위로 줄바꿈된다(실제 스크린샷으로 확인한 버그). 원본
+   productivity.css엔 이 표를 위한 반응형 규칙이 없어서(원본 페이지 자체가 넓은
+   화면 기준), 실제 페이지는 손대지 않고 이 홈페이지 임베드에서만 감싸는 wrapper를
+   추가해 가로 스크롤로 대체한다. */
+.home-page .hiw-table-scroll { overflow-x: auto; }
+.home-page .hiw-table-scroll table.pt-table { min-width: 480px; }
+
+@media (max-width: 860px) {
+  .home-page .hiw-progress { max-width: 520px; }
+}
+
+@media (max-width: 640px) {
+  .home-page { --hiw-panel-height: 620px; }
+  .home-page .hiw-progress { max-width: 320px; }
+  .home-page .hiw-circle { width: 32px; height: 32px; font-size: 13px; }
+  .home-page .hiw-step-desc { display: none; }
+  .home-page .hiw-label-col { padding: 0 2px; }
+  .home-page .hiw-step-label { font-size: 12px; }
+  .home-page .hiw-panel { padding: 24px 16px; margin-top: 28px; }
+}
+
+/* ---------- 최근 견적 내역 (5번 섹션, 정적 예시) ----------
+   왼쪽 표(72%)와 오른쪽 월별 현황 카드(28%)를 flex + align-items:stretch로 나란히
+   배치 — stretch라 두 카드 높이가 항상 서로 맞춰진다(표 행 수가 바뀌어도 그래프
+   카드가 그만큼 늘어난다). */
+.home-page .recent-split { max-width: 1200px; margin: 0 auto; display: flex; align-items: stretch; gap: 24px; }
+.home-page .recent-table-wrap { flex: 1 1 72%; min-width: 0; overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-md); }
+.home-page table.recent-table { width: 100%; min-width: 640px; border-collapse: collapse; }
+.home-page table.recent-table th { text-align: left; font-size: 12px; font-weight: 500; color: var(--text-secondary); background: var(--bg);
+  height: 40px; padding: 0 16px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.home-page table.recent-table th.num { text-align: right; }
+.home-page table.recent-table td { height: 50px; padding: 0 16px; border-bottom: 1px solid var(--border-subtle); font-size: 13.5px; color: var(--text); white-space: nowrap; }
+.home-page table.recent-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.home-page table.recent-table td.muted-cell { color: var(--text-muted); }
+.home-page table.recent-table tr:last-child td { border-bottom: none; }
+
+/* 640px 미만에서는 가로 스크롤 대신 행 하나가 카드 하나로 세로로 쌓인다 —
+   data-label의 값을 각 셀 앞에 라벨로 붙여서(견적번호/현장명/... 열 이름 없이도)
+   읽을 수 있게 한다. */
+@media (max-width: 640px) {
+  .home-page .recent-table-wrap { overflow-x: visible; border: none; box-shadow: none; background: none; }
+  .home-page table.recent-table { min-width: 0; display: block; }
+  .home-page table.recent-table thead { display: none; }
+  .home-page table.recent-table tbody { display: flex; flex-direction: column; gap: 12px; }
+  .home-page table.recent-table tr { display: block; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 6px 16px; box-shadow: var(--shadow-sm); }
+  .home-page table.recent-table td { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    height: auto; padding: 9px 0; border-bottom: 1px solid var(--border-subtle); white-space: normal; text-align: right; }
+  .home-page table.recent-table tr:last-child td { border-bottom: 1px solid var(--border-subtle); }
+  .home-page table.recent-table td:last-child { border-bottom: none; }
+  .home-page table.recent-table td::before { content: attr(data-label); flex-shrink: 0; font-size: 12px; font-weight: 500; color: var(--text-muted); text-align: left; }
+}
+
+@media (max-width: 900px) {
+  .home-page .recent-split { flex-direction: column; }
+  .home-page .qm-card-wrap { flex-basis: auto; }
+}
+
+/* 지표 카드(카운트업 + 스파크라인, 2개 자동 순환) — 순수 CSS/바닐라 JS
+   (setInterval/requestAnimationFrame, QuoteMetricCard.tsx), 차트 라이브러리 없음.
+   .qm-card-wrap이 RevealOnScroll의 스코프 마커(reveal)를 가져서 카드 자체는 스크롤
+   진입 시 페이드인하고, 그 안의 순환/카운트업은 QuoteMetricCard가 스스로
+   IntersectionObserver로 화면 진입을 감지해 시작한다(레이아웃 폭/높이는 옛
+   .mvc-card와 동일하게 .qm-card-wrap이 그대로 물려받는다). */
+.home-page .qm-card-wrap { flex: 0 0 27%; min-width: 220px; display: flex; }
+.home-page .qm-card { width: 100%; background: #EFF6FF; border-radius: 14px; padding: 28px 24px; display: flex; flex-direction: column; justify-content: center; }
+
+.home-page .qm-content { transition: opacity .25s ease; opacity: 1; display: flex; flex-direction: column; gap: 8px; }
+.home-page .qm-content.is-fading { opacity: 0; }
+.home-page .qm-label { font-size: 13px; font-weight: 600; color: #1E3A5F; opacity: .75; }
+.home-page .qm-value { font-size: 40px; font-weight: 800; color: #1E3A5F; line-height: 1; font-variant-numeric: tabular-nums; }
+.home-page .qm-suffix { font-size: 17px; font-weight: 600; margin-left: 4px; }
+.home-page .qm-change { font-size: 12.5px; color: var(--brand); font-weight: 500; }
+.home-page .qm-spark { width: 100%; height: 44px; margin-top: 6px; display: block; }
+
+.home-page .qm-dots { display: flex; gap: 6px; margin-top: 20px; justify-content: center; }
+.home-page .qm-dot { width: 6px; height: 6px; padding: 0; border: none; border-radius: 50%; background: #1E3A5F; opacity: .25;
+  cursor: pointer; transition: opacity .2s ease, transform .2s ease; }
+.home-page .qm-dot.active { opacity: 1; transform: scale(1.3); }
+@media (prefers-reduced-motion: reduce) {
+  .home-page .qm-content { transition: none; }
+}
+
+.home-page .badge { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 9999px; font-size: 11.5px; font-weight: 500; white-space: nowrap; }
+.home-page .badge-mode-private { background: var(--surface-subtle); color: var(--text-secondary); }
+.home-page .badge-mode-public { background: var(--brand-subtle); color: var(--brand); }
+.home-page .badge-neutral { background: var(--surface-subtle); color: var(--text-secondary); }
+.home-page .badge-brand { background: var(--brand-subtle); color: var(--brand); }
+.home-page .badge-success { background: var(--success-subtle); color: var(--success); }
+
+/* ---------- FAQ + CTA (6번 섹션, 2단 배치: 왼쪽 FAQ 약 65% / 오른쪽 CTA 카드 약 35%) ---------- */
+.home-page .faq-cta-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1.85fr 1fr; gap: 32px; align-items: stretch; }
+.home-page .faq-head { text-align: left; margin-bottom: 28px; }
+.home-page .faq-head h2 { font-size: 28px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 10px; }
+.home-page .faq-head p { font-size: 14.5px; color: var(--text-secondary); line-height: 1.6; }
+.home-page .faq-list { display: flex; flex-direction: column; gap: 10px; }
+.home-page .faq-item { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; box-shadow: var(--shadow-sm); }
+.home-page .faq-item summary { list-style: none; cursor: pointer; font-size: 14.5px; font-weight: 600; color: var(--text);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.home-page .faq-item summary::-webkit-details-marker { display: none; }
+.home-page .faq-item summary::after { content: "+"; flex-shrink: 0; font-size: 18px; font-weight: 400; color: var(--text-muted); transition: transform .2s var(--ease); }
+.home-page .faq-item[open] summary::after { transform: rotate(45deg); }
+.home-page .faq-item p { margin: 12px 0 0; font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; }
+
+.home-page .cta-card { border-radius: 20px; padding: 40px 24px; text-align: center; min-height: 320px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+  background-image: linear-gradient(to bottom, rgba(37,99,235,.75), rgba(15,23,42,.85)), url("/images/cleaning-hero.jpg");
+  background-size: cover; background-position: center; background-repeat: no-repeat; box-shadow: var(--shadow-lg); }
+.home-page .cta-card h2 { font-size: 21px; font-weight: 700; color: #fff; margin: 0; letter-spacing: -.01em; line-height: 1.35; }
+
+/* ---------- footer ---------- */
+.home-page .home-footer { border-top: 1px solid var(--border); padding: 40px 24px; }
+.home-page .home-footer-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+.home-page .home-footer-brand p { margin: 8px 0 0; font-size: 12.5px; color: var(--text-muted); }
+.home-page .home-footer-links { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+.home-page .home-footer-links a { font-size: 13px; color: var(--text-secondary); }
+.home-page .home-footer-links a:hover { color: var(--text); }
+
+/* ---------- responsive ---------- */
+@media (max-width: 860px) {
+  .home-page .home-nav-links { display: none; }
+  .home-page .home-hero { padding: 44px 20px 56px; }
+  .home-page .home-hero-inner { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+  .home-page .home-hero h1 { font-size: 32px; }
+  .home-page .home-hero-sub { max-width: none; }
+  .home-page .home-section { padding: 72px 20px; }
+  .home-page .section-head h2 { font-size: 24px; }
+  .home-page .faq-cta-grid { grid-template-columns: 1fr; gap: 24px; }
+  .home-page .cta-card { min-height: 220px; padding: 32px 24px; }
+  .home-page .home-footer-inner { flex-direction: column; align-items: flex-start; }
+}
+
+@media (max-width: 520px) {
+  .home-page .home-nav-inner { padding: 0 16px; }
+  .home-page .home-logo-word { display: none; }
+  .home-page .home-hero h1 { font-size: 27px; }
+  .home-page .home-hero-actions { flex-direction: column; align-items: stretch; }
+  .home-page .home-hero-actions .btn { width: 100%; }
+  .home-page .benefit-card { flex-basis: 220px; }
+}

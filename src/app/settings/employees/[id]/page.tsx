@@ -23,7 +23,7 @@ export default async function EditEmployeePage({ params }: { params: Promise<{ i
 
   return (
     <div className="cs-app-shell shell">
-      <AppSidebar current="employees" companyName={company.name} />
+      <AppSidebar current="employees" companyName={company.name} logoUrl={company.logo_url} />
       <div className="main">
         <div className="employees-page employees-container">
           <div className="page-head">

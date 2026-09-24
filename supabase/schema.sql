@@ -119,6 +119,8 @@ create table expense_items (
   category text not null check (category in ('supplies','equipment','uniform','transport','other')),
   name text not null,
   unit_cost numeric(12,2) not null default 0,
+  is_active boolean not null default true,      -- false면 새 견적 만들기 선택 목록에서 제외
+  note text,                                    -- 비고
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

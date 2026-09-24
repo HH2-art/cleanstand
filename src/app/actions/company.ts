@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { logActivity } from "@/lib/activityLog";
+import { upsertCompanyRow } from "@/lib/company";
 
 export type CompanyActionState = { error: string } | { success: true } | null;
 
@@ -108,31 +109,21 @@ export async function upsertCompany(
   const logoUrl = await resolveLogoUrl(supabase, user.id, formData);
   if (logoUrl !== null && typeof logoUrl === "object") return logoUrl;
 
-  const { data: companyRow, error } = await supabase
-    .from("companies")
-    .upsert(
-      {
-        owner_id: user.id,
-        name,
-        business_registration_number: businessRegistrationNumber,
-        representative_name: representativeName,
-        address,
-        phone,
-        logo_url: logoUrl,
-        general_admin_rate: generalAdminRate,
-        profit_rate: profitRate,
-        vat_rate: vatRate,
-      },
-      { onConflict: "owner_id" },
-    )
-    .select("id")
-    .single();
+  const result = await upsertCompanyRow(supabase, {
+    ownerId: user.id,
+    name,
+    businessRegistrationNumber,
+    representativeName,
+    address,
+    phone,
+    logoUrl,
+    generalAdminRate,
+    profitRate,
+    vatRate,
+  });
+  if ("error" in result) return result;
 
-  if (error) return { error: error.message };
-
-  if (companyRow) {
-    await logActivity(supabase, companyRow.id, user.id, "company_updated", `"${name}" 회사 설정을 수정했습니다.`);
-  }
+  await logActivity(supabase, result.id, user.id, "company_updated", `"${name}" 회사 설정을 수정했습니다.`);
 
   if (passwordChange) {
     const { error: passwordError } = await supabase.auth.updateUser({ password: passwordChange.newPassword });

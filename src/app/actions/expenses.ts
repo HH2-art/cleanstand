@@ -15,18 +15,20 @@ interface ExpenseFields {
   name: string;
   category: ExpenseCategory;
   unit_cost: number;
+  note: string | null;
 }
 
 function parseExpenseFields(formData: FormData): ExpenseFields | { error: string } {
   const name = String(formData.get("name") ?? "").trim();
   const category = String(formData.get("category") ?? "");
   const unitCost = Number(formData.get("unit_cost"));
+  const note = String(formData.get("note") ?? "").trim() || null;
 
   if (!name) return { error: "이름을 입력해주세요." };
   if (!CATEGORIES.includes(category as ExpenseCategory)) return { error: "카테고리를 선택해주세요." };
   if (Number.isNaN(unitCost) || unitCost < 0) return { error: "단가는 0 이상의 숫자여야 합니다." };
 
-  return { name, category: category as ExpenseCategory, unit_cost: unitCost };
+  return { name, category: category as ExpenseCategory, unit_cost: unitCost, note };
 }
 
 export async function createExpenseItem(
@@ -73,5 +75,13 @@ export async function deleteExpenseItem(formData: FormData): Promise<void> {
   const supabase = await createClient();
   await supabase.from("expense_items").delete().eq("id", id).eq("company_id", company.id);
 
+  revalidatePath("/settings/expenses");
+}
+
+/** 목록의 토글 스위치에서 직접 호출 — 폼 없이 서버 액션을 바로 호출하는 패턴. */
+export async function toggleExpenseItemActive(id: string, isActive: boolean): Promise<void> {
+  const company = await requireCurrentCompany();
+  const supabase = await createClient();
+  await supabase.from("expense_items").update({ is_active: isActive }).eq("id", id).eq("company_id", company.id);
   revalidatePath("/settings/expenses");
 }

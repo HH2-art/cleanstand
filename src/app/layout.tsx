@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cleanstand",
+  title: "클린스탠드",
   description: "상업용 청소업체 견적 자동화 SaaS",
 };
 

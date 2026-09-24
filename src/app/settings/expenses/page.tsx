@@ -1,9 +1,33 @@
-import Link from "next/link";
-import { createExpenseItem, deleteExpenseItem, type ExpenseCategory } from "@/app/actions/expenses";
+import "@/styles/app-shell.css";
+import "./expenses.css";
+import { AppSidebar } from "@/components/layout/AppSidebar";
+import { createExpenseItem, type ExpenseCategory } from "@/app/actions/expenses";
 import { requireCurrentCompany } from "@/lib/company";
 import { createClient } from "@/lib/supabase/server";
 import { ExpenseForm } from "./ExpenseForm";
-import { CATEGORY_LABELS, CATEGORY_ORDER } from "./labels";
+import { ExpenseListContent, type ExpenseRow } from "./ExpenseListContent";
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
+}
+
+function PlusIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+function InfoIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5M12 8h.01" />
+    </svg>
+  );
+}
 
 export default async function ExpensesPage() {
   const company = await requireCurrentCompany();
@@ -16,57 +40,45 @@ export default async function ExpensesPage() {
     .order("category")
     .order("name");
 
-  const byCategory = new Map<ExpenseCategory, typeof items>();
-  for (const cat of CATEGORY_ORDER) byCategory.set(cat, []);
-  for (const item of items ?? []) {
-    byCategory.get(item.category as ExpenseCategory)?.push(item);
-  }
+  const rows: ExpenseRow[] = (items ?? []).map((item) => ({
+    id: item.id,
+    name: item.name,
+    category: item.category as ExpenseCategory,
+    unitCost: item.unit_cost,
+    isActive: item.is_active,
+    note: item.note,
+    registeredDate: formatDate(item.created_at),
+  }));
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-10 px-4 py-12">
-      <div>
-        <h1 className="text-2xl font-bold">경비 항목</h1>
-        <p className="mt-1 text-sm text-gray-500">{company.name}</p>
+    <div className="cs-app-shell shell">
+      <AppSidebar current="expenses" companyName={company.name} logoUrl={company.logo_url} />
+      <div className="main">
+        <div className="expenses-page expenses-container">
+          <div className="page-head-row">
+            <div className="page-head">
+              <h1>경비 항목</h1>
+              <p>
+                견적 계산에 사용되는 경비 항목을 관리합니다. 장비, 소모품, 차량, 유지비 등 회사에서 사용하는 항목을
+                등록하고 필요에 따라 수정하거나 삭제할 수 있습니다.
+              </p>
+            </div>
+            <details>
+              <summary className="btn btn-primary">
+                <PlusIcon /> 경비 항목 추가
+              </summary>
+              <ExpenseForm action={createExpenseItem} submitLabel="추가" layout="add" />
+            </details>
+          </div>
+
+          <div className="info-banner">
+            <InfoIcon />
+            <span>경비 항목은 견적 계산 시 자동으로 반영됩니다. 추가한 항목은 견적서 작성 시 선택하여 사용할 수 있습니다.</span>
+          </div>
+
+          <ExpenseListContent items={rows} />
+        </div>
       </div>
-
-      {CATEGORY_ORDER.map((cat) => {
-        const categoryItems = byCategory.get(cat) ?? [];
-        return (
-          <section key={cat} className="flex flex-col gap-2">
-            <h2 className="text-lg font-semibold">{CATEGORY_LABELS[cat]}</h2>
-            {categoryItems.length > 0 ? (
-              <table className="w-full text-sm">
-                <tbody>
-                  {categoryItems.map((item) => (
-                    <tr key={item.id} className="border-b">
-                      <td className="py-2">{item.name}</td>
-                      <td className="py-2 text-right">{item.unit_cost.toLocaleString()}원</td>
-                      <td className="py-2 pl-4 text-right">
-                        <Link href={`/settings/expenses/${item.id}`} className="text-xs underline">
-                          수정
-                        </Link>
-                        <form action={deleteExpenseItem} className="inline">
-                          <input type="hidden" name="id" value={item.id} />
-                          <button type="submit" className="ml-3 text-xs text-red-600 underline">
-                            삭제
-                          </button>
-                        </form>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p className="text-sm text-gray-400">등록된 항목이 없습니다.</p>
-            )}
-          </section>
-        );
-      })}
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">새 경비 항목 추가</h2>
-        <ExpenseForm action={createExpenseItem} submitLabel="추가" />
-      </section>
-    </main>
+    </div>
   );
 }
