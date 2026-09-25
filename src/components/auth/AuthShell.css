@@ -46,6 +46,10 @@
 .auth-form { display: flex; flex-direction: column; gap: 20px; }
 .auth-field { display: flex; flex-direction: column; gap: 8px; }
 .auth-label { font-size: 14px; font-weight: 500; color: var(--text-secondary); }
+/* 비밀번호 라벨 줄에 "비밀번호를 잊으셨나요?" 같은 보조 링크를 같은 줄 우측에 둘 때. */
+.auth-label-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.auth-label-row .auth-inline-link { font-size: 13px; font-weight: 500; color: var(--brand); }
+.auth-label-row .auth-inline-link:hover { text-decoration: underline; }
 
 /* GlassInputWrapper — 테두리 연하게, 배경은 아주 옅은 틴트 + backdrop-blur, 포커스 시
    테두리/배경만 브랜드블루로 살짝 진해짐(레퍼런스의 focus-within:border-violet-400/70

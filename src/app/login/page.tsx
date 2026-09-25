@@ -31,9 +31,14 @@ export default function LoginPage() {
         </div>
 
         <div className="auth-field animate-element animate-delay-400">
-          <label htmlFor="password" className="auth-label">
-            비밀번호
-          </label>
+          <div className="auth-label-row">
+            <label htmlFor="password" className="auth-label">
+              비밀번호
+            </label>
+            <Link href="/forgot-password" className="auth-inline-link">
+              비밀번호를 잊으셨나요?
+            </Link>
+          </div>
           <PasswordInput id="password" name="password" autoComplete="current-password" />
         </div>
 
